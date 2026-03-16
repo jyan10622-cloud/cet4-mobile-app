@@ -1,0 +1,22 @@
+{
+  "name": "CET4 80/20 备考小程序 升级版",
+  "short_name": "CET4冲刺",
+  "description": "为成人本科、上班后重启英语四级的人设计的移动端备考工具。",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "./assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
