@@ -1,52 +1,46 @@
-import { taskBlueprints, vocabLibrary, quizBank } from "./data.js";
-import { clamp, daysBetween, getTodayKey, parseDateKey } from "./utils.js";
+import { dailyTaskTemplates, vocabLibrary, listeningLibrary, weeklyPlan } from "./data.js";
+import { getTodayKey, parseDateKey, daysBetween, clamp } from "./utils.js";
 
-const STORAGE_KEY = "cet4_8020_mobile_v2";
+const STORAGE_KEY = "cet4_mobile_product_v3";
+const START_DATE = "2026-03-16";
 
-function createDefaultState() {
+function defaultState() {
   return {
     settings: {
       examDate: "2026-06-13",
-      dailyMinutes: 90,
-      targetScore: 425,
+      dailyMinutes: 60,
+      targetScore: 500,
+      reminder: true,
       theme: "system"
     },
     tasksByDate: {},
-    vocabStatus: {},
-    quizHistory: [],
-    wrongQuestionIds: [],
-    correctionHistory: {},
-    translationHistory: {},
-    lessonDoneIds: [],
-    dailyNotes: {},
-    profile: {
-      learnerType: "成人本科 · 上班后重启",
-      weakPoints: ["主谓一致", "基础时态", "简单输出"],
-      strongPoints: ["基础词汇识别", "简单阅读理解"]
-    }
+    vocabProgress: {},
+    listeningProgress: {},
+    listeningFavorites: [],
+    checkins: [],
+    stats: { totalTasksCompleted: 0, totalMinutes: 0 },
+    startedAt: getTodayKey()
   };
 }
 
 export function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createDefaultState();
-    const parsed = JSON.parse(raw);
-    const merged = { ...createDefaultState(), ...parsed };
-    merged.settings = { ...createDefaultState().settings, ...(parsed.settings || {}) };
-    merged.profile = { ...createDefaultState().profile, ...(parsed.profile || {}) };
-    merged.tasksByDate = parsed.tasksByDate || {};
-    merged.vocabStatus = parsed.vocabStatus || {};
-    merged.quizHistory = Array.isArray(parsed.quizHistory) ? parsed.quizHistory : [];
-    merged.wrongQuestionIds = Array.isArray(parsed.wrongQuestionIds) ? parsed.wrongQuestionIds : [];
-    merged.correctionHistory = parsed.correctionHistory || {};
-    merged.translationHistory = parsed.translationHistory || {};
-    merged.lessonDoneIds = Array.isArray(parsed.lessonDoneIds) ? parsed.lessonDoneIds : [];
-    merged.dailyNotes = parsed.dailyNotes || {};
-    return merged;
-  } catch (error) {
-    console.warn("loadState failed", error);
-    return createDefaultState();
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const base = defaultState();
+    if (!parsed) return base;
+    return {
+      ...base,
+      ...parsed,
+      settings: { ...base.settings, ...(parsed.settings || {}) },
+      tasksByDate: parsed.tasksByDate || {},
+      vocabProgress: parsed.vocabProgress || {},
+      listeningProgress: parsed.listeningProgress || {},
+      listeningFavorites: parsed.listeningFavorites || [],
+      checkins: parsed.checkins || [],
+      stats: { ...base.stats, ...(parsed.stats || {}) }
+    };
+  } catch {
+    return defaultState();
   }
 }
 
@@ -54,272 +48,175 @@ export function saveState(state) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
-export function resetState() {
-  const state = createDefaultState();
-  saveState(state);
-  return state;
+function dateSeed(dateKey) {
+  const d = parseDateKey(dateKey);
+  return d.getDate() + d.getMonth() * 31;
 }
 
-function getPhase(examDate) {
-  const today = new Date();
-  const exam = new Date(`${examDate}T00:00:00`);
-  const daysLeft = daysBetween(today, exam);
-  if (daysLeft <= 28) return "sprint";
-  if (daysLeft <= 63) return "strengthen";
-  return "foundation";
-}
-
-function findCarryoverTask(state, dateKey) {
-  const dates = Object.keys(state.tasksByDate).sort().reverse();
-  for (const key of dates) {
-    if (key >= dateKey) continue;
-    const tasks = state.tasksByDate[key] || [];
-    const match = tasks.find((task) => task.status === "deferred" && !task.carryoverUsed);
-    if (match) {
-      match.carryoverUsed = true;
-      return {
-        id: `carry-${key}-${match.id}`,
-        type: "carryover",
-        tag: "补做任务",
-        title: `补做：${match.title}`,
-        minutes: match.minutes,
-        desc: "这是你之前延期的任务，今天补掉最划算。",
-        points: ["做完它，避免任务堆积", "延期可以，但别无限延期"],
-        status: "pending",
-        sourceDate: key
-      };
-    }
-  }
-  return null;
-}
-
-function pickBlueprints(phase, seed) {
-  const blueprints = taskBlueprints[phase] || taskBlueprints.foundation;
-  const words = blueprints.words[seed % blueprints.words.length];
-  const grammar = blueprints.grammar[seed % blueprints.grammar.length];
-  const reading = blueprints.reading[seed % blueprints.reading.length];
-  const quiz = blueprints.quiz[seed % blueprints.quiz.length];
-  return [words, grammar, reading, quiz];
-}
-
-function createTaskFromBlueprint(blueprint, dateKey, index) {
-  return {
-    ...blueprint,
-    id: `${dateKey}-${index}-${blueprint.id}`,
-    status: "pending"
-  };
-}
-
-export function ensureTasksForDate(state, dateKey = getTodayKey()) {
+export function ensureDailyTasks(state, dateKey = getTodayKey()) {
   if (state.tasksByDate[dateKey]) return state.tasksByDate[dateKey];
-  const phase = getPhase(state.settings.examDate);
-  const seed = parseDateKey(dateKey).getDate() + parseDateKey(dateKey).getMonth() * 31;
-  const carryover = findCarryoverTask(state, dateKey);
-  const tasks = pickBlueprints(phase, seed).map((item, idx) => createTaskFromBlueprint(item, dateKey, idx));
-  if (carryover) tasks.unshift(carryover);
+  const seed = dateSeed(dateKey);
+  const tasks = dailyTaskTemplates.map((tpl, idx) => ({
+    id: `${dateKey}-${tpl.key}-${idx}`,
+    key: tpl.key,
+    title: tpl.title,
+    minutes: tpl.minutes,
+    type: tpl.type,
+    status: "pending"
+  }));
+  if (seed % 3 === 0) {
+    tasks.push({ id: `${dateKey}-translation`, key: "translation", title: "完成 1 组翻译表达", minutes: 12, type: "writing", status: "pending" });
+  }
   state.tasksByDate[dateKey] = tasks;
   saveState(state);
   return tasks;
 }
 
 export function setTaskStatus(state, dateKey, taskId, status) {
-  ensureTasksForDate(state, dateKey);
-  const tasks = state.tasksByDate[dateKey];
-  const task = tasks.find((item) => item.id === taskId);
-  if (!task) return state;
+  const tasks = ensureDailyTasks(state, dateKey);
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task || task.status === status) return;
+  const prevCompleted = task.status === "completed";
   task.status = status;
+  if (!prevCompleted && status === "completed") {
+    state.stats.totalTasksCompleted += 1;
+    state.stats.totalMinutes += Number(task.minutes || 0);
+    if (!state.checkins.includes(dateKey)) state.checkins.push(dateKey);
+  }
   saveState(state);
-  return state;
 }
 
-export function setVocabStatus(state, vocabId, status) {
-  state.vocabStatus[vocabId] = status;
+export function setVocabStatus(state, wordId, status) {
+  const prev = state.vocabProgress[wordId]?.status;
+  state.vocabProgress[wordId] = {
+    status,
+    updatedAt: Date.now(),
+    reviewCount: (state.vocabProgress[wordId]?.reviewCount || 0) + 1
+  };
+  if (prev !== "已掌握" && status === "已掌握") {
+    state.stats.totalMinutes += 1;
+  }
   saveState(state);
-  return state;
 }
 
-export function recordQuizAnswer(state, questionId, isCorrect) {
-  const question = quizBank.find((item) => item.id === questionId);
-  if (!question) return state;
-  state.quizHistory.push({
-    date: getTodayKey(),
-    category: question.category,
-    questionId,
-    correct: Boolean(isCorrect)
+export function pickWordDeck(state, mode = "learn", size = 12) {
+  const scored = vocabLibrary.map((w) => {
+    const p = state.vocabProgress[w.id];
+    const status = p?.status || "未学习";
+    const reviewed = p?.reviewCount || 0;
+    const scoreMap = {
+      "不认识": 100,
+      "模糊": 75,
+      "认识": 45,
+      "已掌握": 10,
+      "未学习": 90
+    };
+    const priority = scoreMap[status] + Math.max(0, 20 - reviewed);
+    return { ...w, status, priority };
   });
-  const wrongSet = new Set(state.wrongQuestionIds);
-  if (isCorrect) {
-    wrongSet.delete(questionId);
-  } else {
-    wrongSet.add(questionId);
-  }
-  state.wrongQuestionIds = [...wrongSet];
-  saveState(state);
-  return state;
+  const sorted = scored.sort((a, b) => b.priority - a.priority);
+  const filtered = mode === "learn"
+    ? sorted.filter((w) => w.status === "未学习" || w.status === "不认识" || w.status === "模糊")
+    : sorted.filter((w) => w.status !== "未学习");
+  return (filtered.length ? filtered : sorted).slice(0, size);
 }
 
-export function setCorrectionResult(state, drillId, result) {
-  state.correctionHistory[drillId] = result;
-  saveState(state);
-  return state;
+export function getVocabStats(state) {
+  const stats = { "未学习": 0, "不认识": 0, "模糊": 0, "认识": 0, "已掌握": 0 };
+  vocabLibrary.forEach((w) => {
+    const s = state.vocabProgress[w.id]?.status || "未学习";
+    stats[s] += 1;
+  });
+  return { ...stats, total: vocabLibrary.length };
 }
 
-export function setTranslationResult(state, drillId, result) {
-  state.translationHistory[drillId] = result;
+export function toggleListeningFavorite(state, id) {
+  const set = new Set(state.listeningFavorites);
+  if (set.has(id)) set.delete(id); else set.add(id);
+  state.listeningFavorites = [...set];
   saveState(state);
-  return state;
 }
 
-export function setLessonDone(state, lessonId) {
-  if (!state.lessonDoneIds.includes(lessonId)) {
-    state.lessonDoneIds.push(lessonId);
-  }
+export function markListeningPracticed(state, id) {
+  state.listeningProgress[id] = { practiced: true, times: (state.listeningProgress[id]?.times || 0) + 1, updatedAt: Date.now() };
+  state.stats.totalMinutes += 10;
   saveState(state);
-  return state;
 }
 
-export function setDailyNote(state, dateKey, note) {
-  state.dailyNotes[dateKey] = note;
+export function updateSettings(state, next) {
+  state.settings = { ...state.settings, ...next };
   saveState(state);
-  return state;
 }
 
-export function updateSettings(state, nextSettings) {
-  state.settings = { ...state.settings, ...nextSettings };
-  saveState(state);
-  return state;
-}
-
-export function getTaskSummary(state, days = 7) {
-  const today = new Date();
-  let completed = 0;
-  let total = 0;
-  let minutes = 0;
-  for (let i = 0; i < days; i += 1) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    const key = getTodayKey(date);
-    const tasks = state.tasksByDate[key] || [];
-    total += tasks.length;
-    tasks.forEach((task) => {
-      if (task.status === "completed") {
-        completed += 1;
-        minutes += Number(task.minutes || 0);
-      }
-    });
-  }
-  return { completed, total, minutes };
+export function getDashboard(state, dateKey = getTodayKey()) {
+  const tasks = ensureDailyTasks(state, dateKey);
+  const completed = tasks.filter((t) => t.status === "completed").length;
+  const weekMinutes = lastNDays(state, 7).reduce((sum, row) => sum + row.minutes, 0);
+  const streak = getStreak(state);
+  const vocab = getVocabStats(state);
+  return {
+    today: { completed, total: tasks.length, progress: tasks.length ? Math.round((completed / tasks.length) * 100) : 0 },
+    streak,
+    weekMinutes,
+    masteredWords: vocab["已掌握"]
+  };
 }
 
 export function getStreak(state) {
   let streak = 0;
-  const today = new Date();
+  let cursor = new Date();
   for (let i = 0; i < 365; i += 1) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    const key = getTodayKey(date);
+    const key = getTodayKey(cursor);
     const tasks = state.tasksByDate[key] || [];
     if (!tasks.length) break;
-    const done = tasks.filter((task) => task.status === "completed").length;
-    if (done >= Math.max(1, Math.ceil(tasks.length * 0.5))) {
-      streak += 1;
-    } else {
-      break;
-    }
+    const done = tasks.filter((t) => t.status === "completed").length;
+    if (done >= Math.max(1, Math.floor(tasks.length * 0.6))) streak += 1; else break;
+    cursor.setDate(cursor.getDate() - 1);
   }
   return streak;
 }
 
-export function getVocabStats(state) {
-  const counts = { unknown: 0, familiar: 0, mastered: 0, untouched: 0, total: vocabLibrary.length };
-  vocabLibrary.forEach((item) => {
-    const status = state.vocabStatus[item.id];
-    if (!status) counts.untouched += 1;
-    else if (status === "unknown") counts.unknown += 1;
-    else if (status === "familiar") counts.familiar += 1;
-    else if (status === "mastered") counts.mastered += 1;
-  });
-  return counts;
-}
-
-export function getQuizStats(state) {
-  const byCategory = {};
-  const allCategories = [...new Set(quizBank.map((item) => item.category))];
-  allCategories.forEach((cat) => {
-    byCategory[cat] = { total: 0, correct: 0, accuracy: 0 };
-  });
-  state.quizHistory.forEach((row) => {
-    byCategory[row.category] ??= { total: 0, correct: 0, accuracy: 0 };
-    byCategory[row.category].total += 1;
-    if (row.correct) byCategory[row.category].correct += 1;
-  });
-  Object.keys(byCategory).forEach((cat) => {
-    const item = byCategory[cat];
-    item.accuracy = item.total ? Math.round((item.correct / item.total) * 100) : 0;
-  });
-  const total = state.quizHistory.length;
-  const correct = state.quizHistory.filter((row) => row.correct).length;
-  return {
-    total,
-    correct,
-    accuracy: total ? Math.round((correct / total) * 100) : 0,
-    byCategory
-  };
-}
-
-export function getReadinessScore(state) {
-  const task14 = getTaskSummary(state, 14);
-  const vocab = getVocabStats(state);
-  const quiz = getQuizStats(state);
-  const taskPart = task14.total ? (task14.completed / task14.total) * 45 : 0;
-  const vocabPart = ((vocab.mastered + vocab.familiar * 0.5) / Math.max(1, vocab.total)) * 25;
-  const quizPart = (quiz.accuracy / 100) * 30;
-  return Math.round(clamp(taskPart + vocabPart + quizPart, 18, 92));
-}
-
-export function getHeatmapData(state, days = 84) {
-  const out = [];
-  const today = new Date();
-  for (let i = days - 1; i >= 0; i -= 1) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    const key = getTodayKey(date);
+function lastNDays(state, n) {
+  const rows = [];
+  const now = new Date();
+  for (let i = 0; i < n; i += 1) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = getTodayKey(d);
     const tasks = state.tasksByDate[key] || [];
-    const done = tasks.filter((task) => task.status === "completed").length;
-    const total = tasks.length;
-    const level = total ? Math.ceil((done / total) * 4) : 0;
-    out.push({ key, done, total, level });
+    const completedTasks = tasks.filter((t) => t.status === "completed");
+    rows.push({ key, completed: completedTasks.length, minutes: completedTasks.reduce((s, t) => s + t.minutes, 0) });
   }
-  return out;
+  return rows;
 }
 
-export function getWeekGoal(state) {
-  const targetMinutes = state.settings.dailyMinutes * 5;
-  const summary = getTaskSummary(state, 7);
-  return {
-    targetMinutes,
-    currentMinutes: summary.minutes,
-    percent: targetMinutes ? Math.round((summary.minutes / targetMinutes) * 100) : 0
-  };
+export function getPlanSummary(state) {
+  const examDate = new Date(`${state.settings.examDate}T00:00:00`);
+  const startDate = new Date(`${START_DATE}T00:00:00`);
+  const totalDays = Math.max(1, daysBetween(startDate, examDate));
+  const passedDays = clamp(daysBetween(startDate, new Date()), 0, totalDays);
+  const progress = Math.round((passedDays / totalDays) * 100);
+  const currentWeek = clamp(Math.ceil((passedDays + 1) / 7), 1, 12);
+  const weekly = weeklyPlan.map((w) => {
+    const doneMinutes = lastNDays(state, 84).filter((_, idx) => Math.floor(idx / 7) === 12 - w.week).reduce((s, r) => s + r.minutes, 0);
+    return { ...w, progress: Math.round((doneMinutes / w.expectedMinutes) * 100) };
+  });
+  return { totalDays, passedDays, progress, currentWeek, daysLeft: daysBetween(new Date(), examDate), weekly };
 }
 
-export function getMonthlyGoal(state) {
+export function getProfileStats(state) {
+  const learnedDays = new Set(Object.keys(state.tasksByDate).filter((k) => (state.tasksByDate[k] || []).some((t) => t.status === "completed"))).size;
   const vocab = getVocabStats(state);
-  const quiz = getQuizStats(state);
+  const listeningCount = Object.values(state.listeningProgress).reduce((s, row) => s + (row.times || 0), 0);
   return {
-    masteredTarget: 40,
-    masteredCurrent: vocab.mastered,
-    quizTarget: 25,
-    quizCurrent: quiz.total
+    learnedDays,
+    totalTasksCompleted: state.stats.totalTasksCompleted,
+    masteredWords: vocab["已掌握"],
+    listeningCount,
+    streak: getStreak(state)
   };
 }
 
-export function exportState(state) {
-  return JSON.stringify(state, null, 2);
-}
-
-export function importState(raw) {
-  const parsed = JSON.parse(raw);
-  saveState(parsed);
-  return loadState();
+export function getListeningList() {
+  return listeningLibrary;
 }
