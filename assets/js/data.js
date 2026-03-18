@@ -171,9 +171,10 @@ export const listeningLibrary = [
 ];
 
 export const dailyTaskTemplates = [
-  { key: "newWords", title: "学习 12 个新词", minutes: 10, type: "vocab" },
-  { key: "reviewWords", title: "复习 20 个旧词", minutes: 8, type: "vocab" },
-  { key: "spelling", title: "完成 6 个拼写挑战", minutes: 7, type: "vocab" },
+  { key: "newWords", title: "学习新词（12词）", minutes: 10, type: "vocab" },
+  { key: "reviewWords", title: "复习旧词（20词）", minutes: 8, type: "vocab" },
+  { key: "audioWords", title: "听发音辨词（6组）", minutes: 6, type: "vocab" },
+  { key: "spelling", title: "完成拼写挑战（6题）", minutes: 7, type: "vocab" },
   { key: "listening", title: "完成 1 条听力训练", minutes: 8, type: "listening" },
   { key: "readingGrammar", title: "完成 1 条阅读/语法训练", minutes: 8, type: "practice" }
 ];
@@ -189,3 +190,124 @@ export const weeklyPlan = Array.from({ length: 12 }).map((_, i) => {
     expectedMinutes: 280
   };
 });
+
+
+export const vocabEnhancements = {
+  "w-001": {
+    coreMeaning: "维持；保持",
+    meanings: [
+      { enLabel: "v.", zh: "维持，保持" },
+      { enLabel: "v.", zh: "维修，保养" }
+    ],
+    example_en: "Even during finals week, she spent ten minutes to maintain her word list.",
+    example_zh: "即使在期末周，她也会抽十分钟维持词汇复习节奏。",
+    roots: [{ part: "main", meaning: "手；控制" }, { part: "-tain", meaning: "握住、保持" }],
+    wordFamily: [{ word: "maintenance", pos: "n.", zh: "维护；保养" }, { word: "maintained", pos: "adj.", zh: "保养良好的" }],
+    phrases: [{ phrase: "maintain balance", zh: "保持平衡" }, { phrase: "maintain contact", zh: "保持联系" }],
+    extraExamples: [{ en: "A clear schedule helps you maintain focus in the morning.", zh: "清晰的日程有助于你早晨保持专注。" }],
+    audio_us: "https://api.dictionaryapi.dev/media/pronunciations/en/maintain-us.mp3",
+    audio_uk: "https://api.dictionaryapi.dev/media/pronunciations/en/maintain-uk.mp3"
+  },
+  "w-002": {
+    coreMeaning: "表明；暗示",
+    meanings: [{ enLabel: "v.", zh: "表明" }, { enLabel: "v.", zh: "指示" }],
+    example_en: "Her mock-test score indicates that her reading speed is finally improving.",
+    example_zh: "她的模考成绩表明阅读速度终于在提升。",
+    roots: [{ part: "dic", meaning: "说；指出" }],
+    wordFamily: [{ word: "indication", pos: "n.", zh: "迹象" }, { word: "indicator", pos: "n.", zh: "指标" }],
+    phrases: [{ phrase: "indicate that...", zh: "表明……" }, { phrase: "clear indication", zh: "明显迹象" }],
+    audio_us: "https://api.dictionaryapi.dev/media/pronunciations/en/indicate-us.mp3"
+  },
+  "w-003": {
+    coreMeaning: "贡献；促成",
+    meanings: [{ enLabel: "v.", zh: "贡献" }, { enLabel: "v.", zh: "促成" }],
+    example_en: "Every short review contributes to a calmer mind before the exam.",
+    example_zh: "每一次短复习都在为考前更稳定的心态做贡献。",
+    roots: [{ part: "con-", meaning: "共同" }, { part: "trib", meaning: "给予" }],
+    wordFamily: [{ word: "contribution", pos: "n.", zh: "贡献" }, { word: "contributor", pos: "n.", zh: "贡献者" }],
+    phrases: [{ phrase: "contribute to", zh: "有助于；导致" }, { phrase: "make a contribution", zh: "做出贡献" }],
+    audio_uk: "https://api.dictionaryapi.dev/media/pronunciations/en/contribute-uk.mp3"
+  },
+  "w-004": {
+    coreMeaning: "提升；增强",
+    meanings: [{ enLabel: "v.", zh: "提升" }, { enLabel: "v.", zh: "增强" }],
+    example_en: "Listening while commuting can enhance your memory of new expressions.",
+    example_zh: "通勤时听音可以增强你对新表达的记忆。",
+    roots: [{ part: "en-", meaning: "使……" }, { part: "hance", meaning: "提高" }],
+    wordFamily: [{ word: "enhancement", pos: "n.", zh: "增强；提高" }],
+    phrases: [{ phrase: "enhance efficiency", zh: "提升效率" }, { phrase: "enhance skills", zh: "提升技能" }]
+  },
+  "w-005": {
+    coreMeaning: "必要的；本质的",
+    meanings: [{ enLabel: "adj.", zh: "必要的" }, { enLabel: "adj.", zh: "本质的" }],
+    example_en: "A quiet corner in the library is essential for her evening review.",
+    example_zh: "图书馆里安静的角落对她晚上的复习非常必要。",
+    roots: [{ part: "ess", meaning: "存在、本质" }],
+    wordFamily: [{ word: "essentially", pos: "adv.", zh: "本质上" }, { word: "essence", pos: "n.", zh: "本质" }],
+    phrases: [{ phrase: "be essential for", zh: "对……必不可少" }, { phrase: "essential part", zh: "核心部分" }]
+  },
+  "w-014": {
+    coreMeaning: "方法；途径",
+    meanings: [{ enLabel: "n.", zh: "方法" }, { enLabel: "v.", zh: "接近" }],
+    example_en: "Her approach to vocabulary is simple: learn less, review more.",
+    example_zh: "她的词汇学习方法很简单：少学一点，多复习。",
+    roots: [{ part: "proach", meaning: "接近" }],
+    wordFamily: [{ word: "approachable", pos: "adj.", zh: "平易近人的" }],
+    phrases: [{ phrase: "adopt an approach", zh: "采用方法" }, { phrase: "new approach to", zh: "针对……的新方法" }]
+  },
+  "w-015": {
+    coreMeaning: "投入；承诺",
+    meanings: [{ enLabel: "v.", zh: "投入" }, { enLabel: "v.", zh: "犯（错）" }],
+    example_en: "He decided to commit thirty minutes every night to CET4 vocabulary.",
+    example_zh: "他决定每晚投入三十分钟背四级词汇。",
+    roots: [{ part: "com-", meaning: "共同" }, { part: "mit", meaning: "送出" }],
+    wordFamily: [{ word: "commitment", pos: "n.", zh: "投入；承诺" }],
+    phrases: [{ phrase: "commit to", zh: "致力于" }, { phrase: "make a commitment", zh: "做出承诺" }]
+  },
+  "w-019": {
+    coreMeaning: "专注；焦点",
+    meanings: [{ enLabel: "v.", zh: "集中（注意力）" }, { enLabel: "n.", zh: "焦点" }],
+    example_en: "When her phone is on airplane mode, she can focus on one page at a time.",
+    example_zh: "把手机调成飞行模式后，她能一次专注一页内容。",
+    roots: [{ part: "foc", meaning: "火炉中心" }],
+    wordFamily: [{ word: "focused", pos: "adj.", zh: "专注的" }, { word: "focuses", pos: "v.", zh: "集中（第三人称）" }],
+    phrases: [{ phrase: "focus on", zh: "专注于" }, { phrase: "in focus", zh: "焦点清晰" }],
+    audio_us: "https://api.dictionaryapi.dev/media/pronunciations/en/focus-us.mp3"
+  },
+  "w-023": {
+    coreMeaning: "复习；回顾",
+    meanings: [{ enLabel: "v.", zh: "复习" }, { enLabel: "n.", zh: "回顾" }],
+    example_en: "A five-minute review before bed helps her remember tomorrow's words.",
+    example_zh: "睡前五分钟回顾能帮她记住明天要学的单词。",
+    roots: [{ part: "re-", meaning: "再次" }, { part: "vis", meaning: "看" }],
+    wordFamily: [{ word: "reviewer", pos: "n.", zh: "评论者；审稿人" }],
+    phrases: [{ phrase: "review notes", zh: "复习笔记" }, { phrase: "final review", zh: "最后冲刺复习" }]
+  },
+  "w-027": {
+    coreMeaning: "记住；保留",
+    meanings: [{ enLabel: "v.", zh: "记住" }, { enLabel: "v.", zh: "保留" }],
+    example_en: "She writes one tiny story for each word so she can retain it longer.",
+    example_zh: "她给每个词写一个小故事，这样能记得更久。",
+    roots: [{ part: "re-", meaning: "回" }, { part: "tain", meaning: "抓住" }],
+    wordFamily: [{ word: "retention", pos: "n.", zh: "记忆保持" }],
+    phrases: [{ phrase: "retain information", zh: "记住信息" }, { phrase: "data retention", zh: "数据保留" }]
+  },
+  "w-093": {
+    coreMeaning: "表现；执行",
+    meanings: [{ enLabel: "v.", zh: "表现" }, { enLabel: "v.", zh: "执行" }],
+    example_en: "If she sleeps well, she usually performs better in listening sections.",
+    example_zh: "如果睡得好，她在听力部分通常表现更好。",
+    roots: [{ part: "per-", meaning: "完全" }, { part: "form", meaning: "形式" }],
+    wordFamily: [{ word: "performance", pos: "n.", zh: "表现" }],
+    phrases: [{ phrase: "perform well", zh: "表现好" }, { phrase: "perform a task", zh: "执行任务" }]
+  },
+  "w-094": {
+    coreMeaning: "达成；实现",
+    meanings: [{ enLabel: "v.", zh: "达成" }, { enLabel: "v.", zh: "实现" }],
+    example_en: "She achieved her weekly target by finishing review before Friday night.",
+    example_zh: "她在周五晚前完成复习，达成了本周目标。",
+    roots: [{ part: "a-", meaning: "去向" }, { part: "chieve", meaning: "抓住" }],
+    wordFamily: [{ word: "achievement", pos: "n.", zh: "成就" }, { word: "achievable", pos: "adj.", zh: "可实现的" }],
+    phrases: [{ phrase: "achieve a goal", zh: "实现目标" }, { phrase: "highly achieved", zh: "很有成就的" }]
+  }
+};
