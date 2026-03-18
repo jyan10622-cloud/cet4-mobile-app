@@ -600,3 +600,81 @@ summary {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.hero-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hero-kpis h3 {
+  margin: 2px 0 0;
+}
+
+.big-btn {
+  min-height: 52px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.path-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.path-chip {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.check-head {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.check-head input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--success);
+}
+
+.check-head h3 {
+  margin: 0;
+}
+
+.spell-input {
+  min-height: 46px;
+  font-size: 16px;
+}
+
+.word-card {
+  scroll-margin-top: 20px;
+}
+
+.plan-card.current {
+  border-color: rgba(37, 99, 235, 0.4);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0.02));
+}
+
+@media (max-width: 720px) {
+  .hero-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .check-head {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .check-head .mini-status {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+}
