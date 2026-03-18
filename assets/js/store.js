@@ -1,7 +1,7 @@
-import { dailyTaskTemplates, vocabLibrary, listeningLibrary, weeklyPlan } from "./data.js";
+import { dailyTaskTemplates, vocabLibrary, vocabEnhancements, listeningLibrary, weeklyPlan } from "./data.js";
 import { getTodayKey, parseDateKey, daysBetween, clamp } from "./utils.js";
 
-const STORAGE_KEY = "cet4_mobile_product_v4";
+const STORAGE_KEY = "cet4_mobile_product_v5";
 const START_DATE = "2026-03-16";
 
 function defaultState() {
@@ -21,6 +21,7 @@ function defaultState() {
     stats: { totalTasksCompleted: 0, totalMinutes: 0 },
     studyLog: {},
     mistakes: { spelling: [] },
+    lastVocabSession: { mode: "learn", wordId: null, updatedAt: null },
     startedAt: getTodayKey(),
     lastActiveDate: getTodayKey()
   };
@@ -43,6 +44,7 @@ export function loadState() {
       studyLog: parsed.studyLog || {},
       mistakes: { ...base.mistakes, ...(parsed.mistakes || {}) },
       stats: { ...base.stats, ...(parsed.stats || {}) },
+      lastVocabSession: { ...base.lastVocabSession, ...(parsed.lastVocabSession || {}) },
       lastActiveDate: parsed.lastActiveDate || getTodayKey()
     };
   } catch {
@@ -64,7 +66,7 @@ export function ensureDailyTasks(state, dateKey = getTodayKey()) {
   if (state.tasksByDate[dateKey]) return state.tasksByDate[dateKey];
   const missedDays = getMissedDays(state, dateKey);
   const baseTasks = missedDays > 0
-    ? dailyTaskTemplates.filter((t) => ["reviewWords", "spelling", "listening"].includes(t.key))
+    ? dailyTaskTemplates.filter((t) => ["reviewWords", "audioWords", "spelling"].includes(t.key))
     : dailyTaskTemplates;
   state.tasksByDate[dateKey] = baseTasks.map((tpl, idx) => ({
     id: `${dateKey}-${tpl.key}-${idx}`,
@@ -113,7 +115,7 @@ function addDay(now, days) {
 }
 
 function bumpDailyLog(state, key, count = 1, dateKey = getTodayKey()) {
-  state.studyLog[dateKey] = state.studyLog[dateKey] || { newWords: 0, reviewWords: 0, spelling: 0 };
+  state.studyLog[dateKey] = state.studyLog[dateKey] || { newWords: 0, reviewWords: 0, spelling: 0, audioWords: 0 };
   state.studyLog[dateKey][key] = (state.studyLog[dateKey][key] || 0) + count;
 }
 
@@ -141,9 +143,34 @@ export function rateVocabWord(state, wordId, rating) {
   return row;
 }
 
+function enrichWord(baseWord) {
+  const detail = vocabEnhancements[baseWord.id] || {};
+  const meanings = detail.meanings?.length ? detail.meanings : [{ enLabel: "core", zh: baseWord.meaning }];
+  const mainMeaning = detail.coreMeaning || meanings[0]?.zh || baseWord.meaning;
+  const exampleEn = detail.example_en || baseWord.example_en;
+  const exampleZh = detail.example_zh || baseWord.example_zh;
+  return {
+    ...baseWord,
+    ...detail,
+    mainMeaning,
+    meanings,
+    example_en: exampleEn,
+    example_zh: exampleZh,
+    roots: detail.roots || [],
+    wordFamily: detail.wordFamily || [],
+    phrases: detail.phrases || [],
+    extraExamples: detail.extraExamples || [],
+    audio_us: detail.audio_us || "",
+    audio_uk: detail.audio_uk || "",
+    example_audio_us: detail.example_audio_us || "",
+    example_audio_uk: detail.example_audio_uk || ""
+  };
+}
+
 export function getVocabDeck(state, mode = "learn", size = 12) {
   const now = Date.now();
-  const list = vocabLibrary.map((w) => {
+  const list = vocabLibrary.map((raw) => {
+    const w = enrichWord(raw);
     const p = state.vocabProgress[w.id] || {};
     const familiarityStatus = p.familiarityStatus || "未学习";
     const due = !p.nextReviewAt || new Date(p.nextReviewAt).getTime() <= now;
@@ -176,6 +203,20 @@ export function submitSpelling(state, wordId, passed) {
   saveState(state);
 }
 
+export function touchAudioTraining(state) {
+  bumpDailyLog(state, "audioWords");
+  saveState(state);
+}
+
+export function setLastVocabSession(state, payload) {
+  state.lastVocabSession = {
+    mode: payload?.mode || "learn",
+    wordId: payload?.wordId || null,
+    updatedAt: new Date().toISOString()
+  };
+  saveState(state);
+}
+
 export function getVocabStats(state, dateKey = getTodayKey()) {
   const stats = { total: vocabLibrary.length, 未学习: 0, 不认识: 0, 模糊: 0, 认识: 0, spellingEligible: 0 };
   vocabLibrary.forEach((w) => {
@@ -184,7 +225,7 @@ export function getVocabStats(state, dateKey = getTodayKey()) {
     stats[s] += 1;
     if (p?.spellingEligible) stats.spellingEligible += 1;
   });
-  const today = state.studyLog[dateKey] || { newWords: 0, reviewWords: 0, spelling: 0 };
+  const today = state.studyLog[dateKey] || { newWords: 0, reviewWords: 0, spelling: 0, audioWords: 0 };
   return { ...stats, today };
 }
 
@@ -222,6 +263,7 @@ export function getDashboard(state, dateKey = getTodayKey()) {
       remainingMinutes: tasks.filter((t) => t.status !== "completed").reduce((s, t) => s + t.minutes, 0)
     },
     resumeTask: pending,
+    resumeVocab: state.lastVocabSession,
     streak: getStreak(state),
     chain,
     missedDays: getMissedDays(state, dateKey),
