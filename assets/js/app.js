@@ -150,7 +150,7 @@ function renderHome() {
       <div class="bar large"><span style="width:${dashboard.today.progress}%"></span></div>
       <p class="muted">连续打卡 ${dashboard.streak} 天 · 距考试 ${countdown} 天（${escapeHtml(state.settings.examDate)}）</p>
       ${modeHint}
-      <button class="primary-btn big-btn candy" data-action="start-today">开始今天学习</button>
+      <button class="primary-btn big-btn candy" data-action="start-today">${resume ? "继续未完成任务" : "开始今天学习"}</button>
       ${resumeVocab ? `<button class="ghost-btn" data-action="resume-vocab">继续上次词汇学习</button>` : ""}
       ${resume ? `<button class="ghost-btn" data-action="resume-task" data-id="${resume.id}">继续未完成：${escapeHtml(resume.title)}</button>` : ""}
     </section>
@@ -216,6 +216,7 @@ function highlightWordInSentence(sentence, word) {
 function getWordStageTag(card) {
   if (vocabMode === "spelling") return "拼写";
   if (vocabMode === "review") return "复习";
+  if (card?.familiarityStatus === "已掌握") return "已掌握";
   return card?.familiarityStatus === "未学习" ? "新词" : "学习中";
 }
 
@@ -240,10 +241,10 @@ function renderExampleAudioControl(card) {
   const hasAny = hasUS || hasUK;
   return `
     <div class="example-audio-row">
-      <button class="play-btn ${hasAny ? "" : "fallback"}" data-action="play-example-audio">▶</button>
+      <button class="play-btn ${hasAny ? "" : "fallback"}" data-action="play-example-audio">🎬</button>
       <button class="accent-chip ${sentenceAccent === "us" ? "active" : ""}" data-action="set-example-accent" data-accent="us" ${hasUS ? "" : "disabled"}>美音</button>
       <button class="accent-chip ${sentenceAccent === "uk" ? "active" : ""}" data-action="set-example-accent" data-accent="uk" ${hasUK ? "" : "disabled"}>英音</button>
-      <span class="mini-muted">${hasAny ? "例句播放" : "暂无真人句音频"}</span>
+      <span class="mini-muted">${hasAny ? "例句播放" : "暂无真人句音频，自动切系统朗读"}</span>
     </div>
   `;
 }
@@ -260,6 +261,7 @@ function renderExpandedArea(card) {
       ${extraMeanings.length ? `<div class="detail-block"><h4>更多词义</h4><div class="mini-list">${extraMeanings.map((m) => `<span class="soft-chip">${escapeHtml(m.enLabel)} ${escapeHtml(m.zh)}</span>`).join("")}</div></div>` : ""}
       ${card.roots.length ? `<div class="detail-block"><h4>词根词缀</h4><div class="mini-list">${card.roots.map((r) => `<span class="soft-chip">${escapeHtml(r.part)}：${escapeHtml(r.meaning)}</span>`).join("")}</div></div>` : ""}
       ${card.wordFamily.length ? `<div class="detail-block"><h4>同词族</h4><ul class="bullet-list small">${card.wordFamily.slice(0, 4).map((f) => `<li>${escapeHtml(f.word)} (${escapeHtml(f.pos)}) · ${escapeHtml(f.zh)}</li>`).join("")}</ul></div>` : ""}
+      ${card.phrases?.length ? `<div class="detail-block"><h4>四级重点词组</h4><div class="mini-list">${card.phrases.map((p) => `<span class="soft-chip">${escapeHtml(p.phrase)} · ${escapeHtml(p.zh)}</span>`).join("")}</div></div>` : ""}
       ${card.extraExamples?.length ? `<div class="detail-block"><h4>补充例句</h4>${card.extraExamples.slice(0, 1).map((item) => `<p>${highlightWordInSentence(item.en, card.word)}<br/><span class="muted">${escapeHtml(item.zh)}</span></p>`).join("")}</div>` : ""}
       ${renderExampleAudioControl(card)}
     </section>
@@ -283,7 +285,7 @@ function renderSpellingCard(card, idx, total) {
         <button class="small-btn candy" data-action="submit-spelling" data-id="${card.id}" data-word="${escapeHtml(card.word)}">提交</button>
         <button class="small-btn ghost" data-action="retry-spelling">再试一次</button>
       </div>
-      <p class="muted top-gap">提示：${escapeHtml(card.mainMeaning)} · ${escapeHtml(card.example_zh)}</p>
+      <p class="muted top-gap">提示：${escapeHtml(card.mainMeaning)} · ${escapeHtml(card.example_zh)}。错词会自动进入错词池，支持再次挑战。</p>
     </section>
   `;
 }
@@ -334,11 +336,12 @@ function renderVocab() {
         ${(current.phrases || []).slice(0, 3).map((p) => `<button class="phrase-chip" data-action="show-phrase" data-phrase="${escapeHtml(p.phrase)}" data-zh="${escapeHtml(p.zh)}">${escapeHtml(p.phrase)}<span>${escapeHtml(p.zh)}</span></button>`).join("")}
       </div>
       ${renderExpandedArea(current)}
+      <div class="deck-dots top-gap">${vocabDeck.map((item, idx) => `<span class="dot ${idx === vocabIndex ? "active" : ""} ${item.id === current.id ? "current" : ""}" title="${escapeHtml(item.word)}"></span>`).join("")}</div>
       <div class="progress-line top-gap">学习进度：${vocabIndex + 1}/${vocabDeck.length}</div>
       <div class="action-row top-gap rate-row">
-        <button class="small-btn ghost rate-btn" data-action="word-rate" data-id="${current.id}" data-rate="不认识">不认识</button>
-        <button class="small-btn ghost rate-btn" data-action="word-rate" data-id="${current.id}" data-rate="模糊">模糊</button>
-        <button class="small-btn candy rate-btn" data-action="word-rate" data-id="${current.id}" data-rate="认识">认识</button>
+        <button class="small-btn ghost rate-btn rate-unknown" data-action="word-rate" data-id="${current.id}" data-rate="不认识">😭 不认识</button>
+        <button class="small-btn ghost rate-btn rate-fuzzy" data-action="word-rate" data-id="${current.id}" data-rate="模糊">🤔 模糊</button>
+        <button class="small-btn candy rate-btn rate-known" data-action="word-rate" data-id="${current.id}" data-rate="认识">✨ 认识</button>
       </div>
     </section>
   ` : `<section class="card top-gap"><p>当前模式今日卡片已完成，可切换模式继续。</p></section>`);
@@ -525,6 +528,12 @@ function handleAction(action, el) {
     return;
   }
   if (action === "start-today") {
+    const pendingTask = ensureDailyTasks(state, today).find((t) => t.status !== "completed");
+    if (pendingTask) {
+      startTask(pendingTask);
+      showToast(`继续未完成：${pendingTask.title}`);
+      return;
+    }
     gotoView("vocab");
     return;
   }
@@ -595,7 +604,9 @@ function handleAction(action, el) {
   if (action === "word-rate") {
     const row = rateVocabWord(state, el.dataset.id, el.dataset.rate);
     if (el.dataset.rate === "不认识") playPronunciation("word", current, vocabAccent);
-    if (row.spellingEligible) showToast("该词已进入拼写池");
+    if (row.familiarityStatus === "已掌握") showToast("太棒了，已进入「已掌握」✨");
+    else if (row.spellingEligible) showToast("该词已进入拼写池");
+    else showToast(`已标记：${el.dataset.rate}`);
     completeTaskByKey(vocabMode === "review" ? "reviewWords" : "newWords");
     advanceVocab();
     renderVocab();
