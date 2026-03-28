@@ -102,6 +102,7 @@ function ensureWordProgress(state, wordId) {
     knownCount: prev.knownCount || 0,
     lastSeenAt: prev.lastSeenAt || null,
     nextReviewAt: prev.nextReviewAt || null,
+    reviewQueue: Array.isArray(prev.reviewQueue) ? prev.reviewQueue : [],
     spellingEligible: Boolean(prev.spellingEligible),
     wrongSpellingCount: prev.wrongSpellingCount || 0
   };
@@ -112,6 +113,14 @@ function addDay(now, days) {
   const d = new Date(now);
   d.setDate(d.getDate() + days);
   return d.toISOString();
+}
+
+function createReviewQueue(days = [], now = Date.now()) {
+  return days.map((d) => addDay(now, d));
+}
+
+function syncNextReview(row) {
+  row.nextReviewAt = row.reviewQueue?.[0] || null;
 }
 
 function bumpDailyLog(state, key, count = 1, dateKey = getTodayKey()) {
@@ -126,17 +135,20 @@ export function rateVocabWord(state, wordId, rating) {
   if (rating === "不认识") {
     row.familiarityStatus = "不认识";
     row.knownCount = 0;
-    row.nextReviewAt = addDay(Date.now(), 1);
+    row.reviewQueue = createReviewQueue([0, 1]);
+    syncNextReview(row);
     bumpDailyLog(state, "reviewWords");
   } else if (rating === "模糊") {
     row.familiarityStatus = "模糊";
-    row.nextReviewAt = addDay(Date.now(), 2);
+    row.reviewQueue = createReviewQueue([2]);
+    syncNextReview(row);
     bumpDailyLog(state, "reviewWords");
   } else {
-    row.familiarityStatus = "认识";
     row.knownCount += 1;
-    row.nextReviewAt = addDay(Date.now(), row.knownCount >= 2 ? 5 : 3);
-    if (row.knownCount >= 2 || row.reviewCount >= 3) row.spellingEligible = true;
+    row.familiarityStatus = row.knownCount >= 3 ? "已掌握" : "认识";
+    row.reviewQueue = createReviewQueue([row.familiarityStatus === "已掌握" ? 7 : 4]);
+    syncNextReview(row);
+    row.spellingEligible = true;
     bumpDailyLog(state, row.reviewCount <= 1 ? "newWords" : "reviewWords");
   }
   saveState(state);
@@ -173,10 +185,11 @@ export function getVocabDeck(state, mode = "learn", size = 12) {
     const w = enrichWord(raw);
     const p = state.vocabProgress[w.id] || {};
     const familiarityStatus = p.familiarityStatus || "未学习";
-    const due = !p.nextReviewAt || new Date(p.nextReviewAt).getTime() <= now;
-    const weightMap = { "未学习": 90, "不认识": 100, "模糊": 75, "认识": 45 };
+    const queue = Array.isArray(p.reviewQueue) ? p.reviewQueue : (p.nextReviewAt ? [p.nextReviewAt] : []);
+    const due = queue.length ? queue.some((t) => new Date(t).getTime() <= now) : !p.nextReviewAt || new Date(p.nextReviewAt).getTime() <= now;
+    const weightMap = { "未学习": 90, "不认识": 100, "模糊": 75, "认识": 45, "已掌握": 18 };
     const weight = weightMap[familiarityStatus] + (due ? 12 : 0) + Math.max(0, 8 - (p.reviewCount || 0));
-    return { ...w, familiarityStatus, due, weight, ...p };
+    return { ...w, familiarityStatus, due, weight, reviewQueue: queue, ...p };
   });
 
   if (mode === "review") {
@@ -185,7 +198,7 @@ export function getVocabDeck(state, mode = "learn", size = 12) {
   if (mode === "spelling") {
     return list.filter((w) => w.spellingEligible).sort((a, b) => b.weight - a.weight).slice(0, size);
   }
-  return list.filter((w) => w.familiarityStatus === "未学习" || w.familiarityStatus === "不认识" || w.familiarityStatus === "模糊").sort((a, b) => b.weight - a.weight).slice(0, size);
+  return list.filter((w) => ["未学习", "不认识", "模糊", "认识"].includes(w.familiarityStatus)).sort((a, b) => b.weight - a.weight).slice(0, size);
 }
 
 export function submitSpelling(state, wordId, passed) {
@@ -193,10 +206,13 @@ export function submitSpelling(state, wordId, passed) {
   row.spellingEligible = true;
   if (!passed) {
     row.wrongSpellingCount += 1;
-    row.nextReviewAt = addDay(Date.now(), 1);
+    row.reviewQueue = createReviewQueue([0, 1]);
+    syncNextReview(row);
     state.mistakes.spelling = Array.from(new Set([wordId, ...(state.mistakes.spelling || [])])).slice(0, 30);
   } else {
-    row.nextReviewAt = addDay(Date.now(), 4);
+    if (row.familiarityStatus === "认识" && row.knownCount >= 2) row.familiarityStatus = "已掌握";
+    row.reviewQueue = createReviewQueue([row.familiarityStatus === "已掌握" ? 7 : 4]);
+    syncNextReview(row);
     state.mistakes.spelling = (state.mistakes.spelling || []).filter((id) => id !== wordId);
     bumpDailyLog(state, "spelling");
   }
@@ -218,7 +234,7 @@ export function setLastVocabSession(state, payload) {
 }
 
 export function getVocabStats(state, dateKey = getTodayKey()) {
-  const stats = { total: vocabLibrary.length, 未学习: 0, 不认识: 0, 模糊: 0, 认识: 0, spellingEligible: 0 };
+  const stats = { total: vocabLibrary.length, 未学习: 0, 不认识: 0, 模糊: 0, 认识: 0, 已掌握: 0, spellingEligible: 0 };
   vocabLibrary.forEach((w) => {
     const p = state.vocabProgress[w.id];
     const s = p?.familiarityStatus || "未学习";
@@ -324,7 +340,7 @@ export function getProfileStats(state) {
   return {
     learnedDays,
     totalTasksCompleted: state.stats.totalTasksCompleted,
-    masteredWords: vocab.认识,
+    masteredWords: vocab.已掌握,
     listeningCount,
     streak: getStreak(state)
   };
