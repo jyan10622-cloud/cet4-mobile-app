@@ -156,18 +156,12 @@ export const readingStrategies = [
 ];
 
 export const listeningLibrary = [
-  { id: "l-news-1", title: "Library Extends Night Service", type: "短篇新闻", duration: "01:20", text: "The city library announced extended evening service for workers.", target: "抓数字与时间", transcript: "Good evening. The city library has extended its night study service from 8 p.m. to 10 p.m. for working adults.", keySentence: "The service now ends at 10 p.m.", audio: "" },
-  { id: "l-news-2", title: "Community Offers Weekend Classes", type: "短篇新闻", duration: "01:16", text: "A community center launches free weekend English classes.", target: "抓主旨与对象", transcript: "A local community center has started free weekend English classes for adults preparing for exams.", keySentence: "The classes are free for adults.", audio: "" },
-  { id: "l-news-3", title: "City Bus Adds Study Route", type: "短篇新闻", duration: "01:28", text: "A new bus route helps evening learners return home.", target: "抓因果与细节", transcript: "To support evening learners, the city introduced a late bus route near learning centers.", keySentence: "The route serves evening learners.", audio: "" },
-  { id: "l-news-4", title: "University Opens Digital Lab", type: "短篇新闻", duration: "01:22", text: "A digital language lab opens to the public.", target: "抓动作和结果", transcript: "The university opened its digital language lab to citizens every Saturday.", keySentence: "The lab is open on Saturdays.", audio: "" },
-  { id: "l-dialog-1", title: "Planning a 30-Minute Routine", type: "长对话", duration: "02:04", text: "Two friends discuss a practical after-work plan.", target: "抓建议表达", transcript: "W: I only have 30 minutes after work. M: Then do 12 words, one listening and quick review.", keySentence: "Do 12 words first.", audio: "" },
-  { id: "l-dialog-2", title: "Fixing Review Gaps", type: "长对话", duration: "02:11", text: "A learner asks how to restart after a missed day.", target: "抓问题与解决方案", transcript: "M: I missed yesterday. W: Start with three recovery tasks and rebuild rhythm.", keySentence: "Start with three recovery tasks.", audio: "" },
-  { id: "l-dialog-3", title: "Using Listening Speed Wisely", type: "长对话", duration: "02:08", text: "Two classmates talk about 0.8x and 1.2x usage.", target: "抓对比信息", transcript: "W: I use 0.8x first, then 1.0x. M: I use 1.2x for review only.", keySentence: "Speed depends on learning stage.", audio: "" },
-  { id: "l-dialog-4", title: "Handling Spelling Mistakes", type: "长对话", duration: "02:12", text: "A tutor explains how to revisit wrong words.", target: "抓步骤信息", transcript: "Tutor: Mark the wrong word, check sentence context, then retry after one day.", keySentence: "Retry after one day.", audio: "" },
-  { id: "l-pass-1", title: "Micro-learning and Adult Memory", type: "听力篇章", duration: "02:40", text: "A short article on how short sessions improve retention.", target: "抓主旨句与因果", transcript: "Research shows short and regular sessions improve memory in adult learners because repetition is easier to sustain.", keySentence: "Short and regular sessions improve memory.", audio: "" },
-  { id: "l-pass-2", title: "From Vocabulary to Output", type: "听力篇章", duration: "02:36", text: "A passage explains the learning loop from input to output.", target: "抓结构层次", transcript: "Learners first recognize words, then review, and finally use them in spelling and writing tasks.", keySentence: "Recognition should lead to output.", audio: "" },
-  { id: "l-pass-3", title: "Why Progress Visibility Matters", type: "听力篇章", duration: "02:32", text: "A report on visual progress and motivation.", target: "抓观点与论据", transcript: "Visible progress bars reduce anxiety and help learners continue daily study.", keySentence: "Visible progress lowers anxiety.", audio: "" },
-  { id: "l-pass-4", title: "Recovering After Interrupted Study", type: "听力篇章", duration: "02:45", text: "A strategy guide for rebuilding rhythm after breaks.", target: "抓行动建议", transcript: "After an interruption, learners should restart with fewer tasks and complete easy wins first.", keySentence: "Easy wins rebuild confidence.", audio: "" }
+  { id: "l-news-1", title: "2025.12 新闻 01：晚间自习延时", type: "短篇新闻", duration: "01:20", year: "2025-12 模拟", qno: "News Q1", target: "数字时间 + 转折后答案", text: "市图书馆延长夜间自习时段，注意转折后细节。", question: "What is the new closing time of the night study service?", options: [{ key: "A", text: "8 p.m." }, { key: "B", text: "9 p.m." }, { key: "C", text: "10 p.m." }, { key: "D", text: "11 p.m." }], answer: "C", answerSentence: "The city library has extended its night study service from 8 p.m. to 10 p.m.", transcript: "Good evening. The city library has extended its night study service from 8 p.m. to 10 p.m. for working adults. However, the weekend schedule remains unchanged.", analysis: "题目问最新结束时间，听到 from 8 p.m. to 10 p.m. 就能直接定位。后一句 however 是干扰信息。", errorTip: "错在听到 8 p.m. 就选了 A，忽略了 from ... to ... 的终点。", keySentence: "The service now ends at 10 p.m.", audio: "" },
+  { id: "l-news-2", title: "2025.12 新闻 02：社区免费课", type: "短篇新闻", duration: "01:16", year: "2025-12 模拟", qno: "News Q2", target: "对象定位 + 同义替换", text: "社区中心周末开设英语课，抓受众对象。", question: "Who can take the weekend English classes for free?", options: [{ key: "A", text: "All teenagers in the city." }, { key: "B", text: "Adults preparing for exams." }, { key: "C", text: "University teachers." }, { key: "D", text: "Only library members." }], answer: "B", answerSentence: "A local community center has started free weekend English classes for adults preparing for exams.", transcript: "A local community center has started free weekend English classes for adults preparing for exams. Registration is online and closes this Friday.", analysis: "原文中的 adults preparing for exams 与选项 B 完全对应。", errorTip: "把 community center 听成 university，属于场景词误判。", keySentence: "The classes are free for adults.", audio: "" },
+  { id: "l-dialog-1", title: "2025.06 长对话 01：下班后 30 分钟怎么练", type: "长对话", duration: "02:04", year: "2025-06 模拟", qno: "Conv Q8", target: "建议句定位 + 顺序信息", text: "两位同学讨论下班后学习流程。", question: "What does the man suggest the woman do first?", options: [{ key: "A", text: "Take a full mock test." }, { key: "B", text: "Review grammar notes." }, { key: "C", text: "Learn 12 new words." }, { key: "D", text: "Write an essay." }], answer: "C", answerSentence: "Then do 12 words, one listening and quick review.", transcript: "W: I only have 30 minutes after work. M: Then do 12 words, one listening and quick review. W: Should I do grammar first? M: Not today. Keep it simple so you can stick to it.", analysis: "问 first 做什么，抓 then do 12 words 即可。后面提到 grammar first 是反问并被否定。", errorTip: "被 should I do grammar first 误导，没听到男生的否定回答。", keySentence: "Do 12 words first.", audio: "" },
+  { id: "l-dialog-2", title: "2025.06 长对话 02：断档后恢复节奏", type: "长对话", duration: "02:11", year: "2025-06 模拟", qno: "Conv Q9", target: "问题-解决 + 动作词", text: "学习中断一天后如何恢复。", question: "What recovery plan is suggested?", options: [{ key: "A", text: "Restart with three small tasks." }, { key: "B", text: "Skip all listening this week." }, { key: "C", text: "Double the daily workload." }, { key: "D", text: "Only memorize word roots." }], answer: "A", answerSentence: "Start with three recovery tasks and rebuild rhythm.", transcript: "M: I missed yesterday. W: Start with three recovery tasks and rebuild rhythm. M: So I don't need to double my study time? W: Exactly. Just restart and keep the streak.", analysis: "核心句是 Start with three recovery tasks。后面的 don't need to double 进一步排除 C。", errorTip: "认为补课就要加倍学习量，属于常识替代原文。", keySentence: "Start with three recovery tasks.", audio: "" },
+  { id: "l-pass-1", title: "2024.12 篇章 01：短学习单元与记忆", type: "听力篇章", duration: "02:40", year: "2024-12 模拟", qno: "Passage Q16", target: "主旨句 + 因果关系", text: "短学习单元为何提升记忆保留。", question: "Why do short and regular sessions work for adults?", options: [{ key: "A", text: "They remove the need for review." }, { key: "B", text: "They make repetition easier to sustain." }, { key: "C", text: "They improve handwriting speed." }, { key: "D", text: "They reduce vocabulary difficulty." }], answer: "B", answerSentence: "Research shows short and regular sessions improve memory in adult learners because repetition is easier to sustain.", transcript: "Research shows short and regular sessions improve memory in adult learners because repetition is easier to sustain. In contrast, long sessions often cause fatigue and lower recall the next day.", analysis: "because 后给出直接原因：repetition is easier to sustain。", errorTip: "只抓到 improve memory 就选了泛化选项，没定位因果句。", keySentence: "Short and regular sessions improve memory.", audio: "" },
+  { id: "l-pass-2", title: "2024.12 篇章 02：可视化进度与焦虑", type: "听力篇章", duration: "02:32", year: "2024-12 模拟", qno: "Passage Q17", target: "观点-论据 + 态度词", text: "可视化进度条如何影响学习情绪。", question: "According to the speaker, what is the effect of visible progress bars?", options: [{ key: "A", text: "They reduce anxiety and encourage persistence." }, { key: "B", text: "They replace teacher feedback." }, { key: "C", text: "They make listening unnecessary." }, { key: "D", text: "They increase daily study time to 3 hours." }], answer: "A", answerSentence: "Visible progress bars reduce anxiety and help learners continue daily study.", transcript: "Visible progress bars reduce anxiety and help learners continue daily study. The speaker adds that a small win each day is more motivating than a perfect plan that is never started.", analysis: "reduce anxiety + continue daily study 对应 A。其余选项均为原文未提或夸张。", errorTip: "把 more motivating 误解成强制增加学习时长。", keySentence: "Visible progress lowers anxiety.", audio: "" }
 ];
 
 export const dailyTaskTemplates = [
@@ -194,6 +188,8 @@ export const weeklyPlan = Array.from({ length: 12 }).map((_, i) => {
 
 export const vocabEnhancements = {
   "w-001": {
+    pos: "v.",
+    examTags: ["四级高频", "阅读高频", "写作可用"],
     coreMeaning: "维持；保持",
     meanings: [
       { enLabel: "v.", zh: "维持，保持" },
@@ -202,49 +198,69 @@ export const vocabEnhancements = {
     example_en: "Even during finals week, she spent ten minutes to maintain her word list.",
     example_zh: "即使在期末周，她也会抽十分钟维持词汇复习节奏。",
     roots: [{ part: "main", meaning: "手；控制" }, { part: "-tain", meaning: "握住、保持" }],
+    secondaryMeanings: [{ zh: "维修，保养", scene: "设备/系统" }],
     wordFamily: [{ word: "maintenance", pos: "n.", zh: "维护；保养" }, { word: "maintained", pos: "adj.", zh: "保养良好的" }],
     phrases: [{ phrase: "maintain balance", zh: "保持平衡" }, { phrase: "maintain contact", zh: "保持联系" }],
+    confusable: [{ word: "sustain", tip: "更强调‘持续一段时间’" }],
+    phraseAudio: {},
+    familyAudio: {},
     extraExamples: [{ en: "A clear schedule helps you maintain focus in the morning.", zh: "清晰的日程有助于你早晨保持专注。" }],
     audio_us: "https://api.dictionaryapi.dev/media/pronunciations/en/maintain-us.mp3",
     audio_uk: "https://api.dictionaryapi.dev/media/pronunciations/en/maintain-uk.mp3"
   },
   "w-002": {
+    pos: "v.",
+    examTags: ["四级高频", "阅读高频", "听力高频"],
     coreMeaning: "表明；暗示",
     meanings: [{ enLabel: "v.", zh: "表明" }, { enLabel: "v.", zh: "指示" }],
     example_en: "Her mock-test score indicates that her reading speed is finally improving.",
     example_zh: "她的模考成绩表明阅读速度终于在提升。",
     roots: [{ part: "dic", meaning: "说；指出" }],
+    secondaryMeanings: [{ zh: "指示；象征", scene: "图表/数据" }],
     wordFamily: [{ word: "indication", pos: "n.", zh: "迹象" }, { word: "indicator", pos: "n.", zh: "指标" }],
     phrases: [{ phrase: "indicate that...", zh: "表明……" }, { phrase: "clear indication", zh: "明显迹象" }],
+    confusable: [{ word: "imply", tip: "imply 是‘暗示’，语气更间接" }],
     audio_us: "https://api.dictionaryapi.dev/media/pronunciations/en/indicate-us.mp3"
   },
   "w-003": {
+    pos: "v.",
+    examTags: ["四级高频", "写作可用"],
     coreMeaning: "贡献；促成",
     meanings: [{ enLabel: "v.", zh: "贡献" }, { enLabel: "v.", zh: "促成" }],
     example_en: "Every short review contributes to a calmer mind before the exam.",
     example_zh: "每一次短复习都在为考前更稳定的心态做贡献。",
     roots: [{ part: "con-", meaning: "共同" }, { part: "trib", meaning: "给予" }],
+    secondaryMeanings: [{ zh: "促成，导致", scene: "结果/因果" }],
     wordFamily: [{ word: "contribution", pos: "n.", zh: "贡献" }, { word: "contributor", pos: "n.", zh: "贡献者" }],
     phrases: [{ phrase: "contribute to", zh: "有助于；导致" }, { phrase: "make a contribution", zh: "做出贡献" }],
+    confusable: [{ word: "donate", tip: "donate 更偏‘捐赠’，范围更窄" }],
     audio_uk: "https://api.dictionaryapi.dev/media/pronunciations/en/contribute-uk.mp3"
   },
   "w-004": {
+    pos: "v.",
+    examTags: ["四级高频", "听力高频", "写作可用"],
     coreMeaning: "提升；增强",
     meanings: [{ enLabel: "v.", zh: "提升" }, { enLabel: "v.", zh: "增强" }],
     example_en: "Listening while commuting can enhance your memory of new expressions.",
     example_zh: "通勤时听音可以增强你对新表达的记忆。",
     roots: [{ part: "en-", meaning: "使……" }, { part: "hance", meaning: "提高" }],
+    secondaryMeanings: [{ zh: "增强（效果/体验）", scene: "产品/能力" }],
     wordFamily: [{ word: "enhancement", pos: "n.", zh: "增强；提高" }],
-    phrases: [{ phrase: "enhance efficiency", zh: "提升效率" }, { phrase: "enhance skills", zh: "提升技能" }]
+    phrases: [{ phrase: "enhance efficiency", zh: "提升效率" }, { phrase: "enhance skills", zh: "提升技能" }],
+    confusable: [{ word: "improve", tip: "improve 更泛化，enhance 常表示‘进一步增强’" }]
   },
   "w-005": {
+    pos: "adj.",
+    examTags: ["四级高频", "阅读高频", "写作可用"],
     coreMeaning: "必要的；本质的",
     meanings: [{ enLabel: "adj.", zh: "必要的" }, { enLabel: "adj.", zh: "本质的" }],
     example_en: "A quiet corner in the library is essential for her evening review.",
     example_zh: "图书馆里安静的角落对她晚上的复习非常必要。",
     roots: [{ part: "ess", meaning: "存在、本质" }],
+    secondaryMeanings: [{ zh: "本质的，核心的", scene: "观点/论证" }],
     wordFamily: [{ word: "essentially", pos: "adv.", zh: "本质上" }, { word: "essence", pos: "n.", zh: "本质" }],
-    phrases: [{ phrase: "be essential for", zh: "对……必不可少" }, { phrase: "essential part", zh: "核心部分" }]
+    phrases: [{ phrase: "be essential for", zh: "对……必不可少" }, { phrase: "essential part", zh: "核心部分" }],
+    confusable: [{ word: "necessary", tip: "necessary 更中性，essential 更强调‘不可缺少’" }]
   },
   "w-014": {
     coreMeaning: "方法；途径",

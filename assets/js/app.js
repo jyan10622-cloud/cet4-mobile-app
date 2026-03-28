@@ -1,5 +1,6 @@
 import {
-  grammarLessons
+  grammarLessons,
+  readingStrategies
 } from "./data.js";
 import {
   loadState,
@@ -16,6 +17,8 @@ import {
   getListeningList,
   toggleListeningFavorite,
   markListeningPracticed,
+  submitListeningAnswer,
+  markListeningUnderstanding,
   submitSpelling,
   getMistakeWords,
   setLastVocabSession,
@@ -29,9 +32,13 @@ let vocabMode = state.lastVocabSession?.mode || "learn";
 let vocabDeck = [];
 let vocabIndex = 0;
 let spellingType = "audio";
-let listeningType = "全部";
 let activeListeningId = null;
 let listeningSpeed = 1.0;
+let practicePanel = "hub";
+let selectedListeningType = "短篇新闻";
+let activeListeningQuestionId = null;
+const listeningAnswers = {};
+const listeningShowResult = {};
 let fakePlayerTimer = null;
 let fakePlayerSec = 0;
 let vocabAccent = "us";
@@ -71,11 +78,15 @@ function playPronunciation(type, card, accent = "us") {
   if (!card) return;
   const map = {
     word: accent === "uk" ? card.audio_uk : card.audio_us,
-    example: accent === "uk" ? card.example_audio_uk : card.example_audio_us
+    example: accent === "uk" ? card.example_audio_uk : card.example_audio_us,
+    phrase: accent === "uk" ? card.activePhraseAudioUk : card.activePhraseAudioUs,
+    family: accent === "uk" ? card.activeFamilyAudioUk : card.activeFamilyAudioUs
   };
   const textMap = {
     word: card.word,
-    example: card.example_en
+    example: card.example_en,
+    phrase: card.activePhrase || "",
+    family: card.activeFamilyWord || ""
   };
   const src = map[type];
   if (src) {
@@ -83,7 +94,8 @@ function playPronunciation(type, card, accent = "us") {
     vocabAudio.src = src;
     vocabAudio.currentTime = 0;
     vocabAudio.play().then(() => {
-      showToast(`${type === "word" ? "单词" : "例句"}${accent === "uk" ? "英音" : "美音"}播放中`);
+      const label = type === "word" ? "单词" : type === "example" ? "例句" : type === "phrase" ? "词组" : "派生词";
+      showToast(`${label}${accent === "uk" ? "英音" : "美音"}播放中`);
     }).catch(() => {
       showToast("音频暂不可用，已切换语音朗读");
       speakFallback(textMap[type], accent);
@@ -91,7 +103,8 @@ function playPronunciation(type, card, accent = "us") {
     return;
   }
   speakFallback(textMap[type], accent);
-  showToast(type === "word" ? "该词暂无真人音频，已用系统朗读" : "该例句暂无真人音频，已用系统朗读");
+  const fallbackText = type === "word" ? "该词暂无真人音频，已用系统朗读" : type === "example" ? "该例句暂无真人音频，已用系统朗读" : type === "phrase" ? "该词组暂无真人音频，已用系统朗读" : "该派生词暂无真人音频，已用系统朗读";
+  showToast(fallbackText);
 }
 
 function speakFallback(text, accent = "us") {
@@ -257,15 +270,13 @@ function renderExpandedArea(card) {
   return `
     <section class="expand-area slide-expand">
       <button class="expand-btn active" data-action="toggle-word-more" data-id="${card.id}">收起扩展信息</button>
+      ${card.secondaryMeanings?.length ? `<div class="detail-block"><h4>主义项 / 次义项</h4><div class="mini-list"><span class="soft-chip">主义项：${escapeHtml(card.mainMeaning || card.meaning)}</span>${card.secondaryMeanings.map((m) => `<span class="soft-chip">次义项：${escapeHtml(m.zh)}（${escapeHtml(m.scene)}）</span>`).join("")}</div></div>` : ""}
       ${extraMeanings.length ? `<div class="detail-block"><h4>更多词义</h4><div class="mini-list">${extraMeanings.map((m) => `<span class="soft-chip">${escapeHtml(m.enLabel)} ${escapeHtml(m.zh)}</span>`).join("")}</div></div>` : ""}
       ${card.roots.length ? `<div class="detail-block"><h4>词根词缀</h4><div class="mini-list">${card.roots.map((r) => `<span class="soft-chip">${escapeHtml(r.part)}：${escapeHtml(r.meaning)}</span>`).join("")}</div></div>` : ""}
-      ${card.wordFamily.length ? `<div class="detail-block"><h4>同词族</h4><ul class="bullet-list small">${card.wordFamily.slice(0, 4).map((f) => `<li>${escapeHtml(f.word)} (${escapeHtml(f.pos)}) · ${escapeHtml(f.zh)}</li>`).join("")}</ul></div>` : ""}
-      ${card.phrases?.length ? `<div class="detail-block"><h4>四级重点词组</h4><div class="mini-list">${card.phrases.map((p) => `<span class="soft-chip">${highlightWordInSentence(p.phrase, card.word)} · ${escapeHtml(p.zh)}</span>`).join("")}</div></div>` : ""}
+      ${card.wordFamily.length ? `<div class="detail-block"><h4>派生词（可发音）</h4><ul class="bullet-list small">${card.wordFamily.slice(0, 4).map((f) => `<li><button class="inline-audio" data-action="play-family-audio" data-word="${escapeHtml(f.word)}">${escapeHtml(f.word)}</button> (${escapeHtml(f.pos)}) · ${escapeHtml(f.zh)}</li>`).join("")}</ul></div>` : ""}
+      ${card.phrases?.length ? `<div class="detail-block"><h4>四级重点词组（可发音）</h4><div class="mini-list">${card.phrases.map((p) => `<button class="soft-chip clickable-chip" data-action="play-phrase-audio" data-phrase="${escapeHtml(p.phrase)}">${highlightWordInSentence(p.phrase, card.word)} · ${escapeHtml(p.zh)}</button>`).join("")}</div></div>` : ""}
+      ${card.confusable?.length ? `<div class="detail-block"><h4>易混词对比</h4><div class="mini-list">${card.confusable.map((c) => `<span class="soft-chip">${escapeHtml(c.word)}：${escapeHtml(c.tip)}</span>`).join("")}</div></div>` : ""}
       ${card.extraExamples?.length ? `<div class="detail-block"><h4>补充例句</h4>${card.extraExamples.slice(0, 2).map((item) => `<p>${highlightWordInSentence(item.en, card.word)}<br/><span class="muted">${escapeHtml(item.zh)}</span></p>`).join("")}<p class="muted">补充例句无真人音频时，将自动使用系统朗读。</p></div>` : ""}
-      <div class="detail-block">
-        <h4>额外例句发音</h4>
-        ${renderExampleAudioControl(card)}
-      </div>
     </section>
   `;
 }
@@ -323,13 +334,20 @@ function renderVocab() {
         <h2 class="word-title">${escapeHtml(current.word)}</h2>
         ${renderWordAudioControl(current)}
       </div>
-      <p class="ipa-line">${escapeHtml(current.ipa)}</p>
+      <p class="ipa-line">${escapeHtml(current.ipa)} · ${escapeHtml(current.pos || current.meanings?.[0]?.enLabel || "词性待补充")}</p>
       <p class="core-meaning">${escapeHtml(current.mainMeaning || current.meaning)}</p>
+      <div class="chips secondary top-gap">
+        ${(current.examTags?.length ? current.examTags : ["四级高频"]).map((tag) => `<span class="chip active">${escapeHtml(tag)}</span>`).join("")}
+      </div>
       <article class="example-card">
         <p class="example-en">${highlightWordInSentence(current.example_en, current.word)}</p>
         <p class="example-zh">${escapeHtml(current.example_zh)}</p>
         ${renderExampleAudioControl(current)}
       </article>
+      <div class="action-row top-gap">
+        <button class="small-btn ghost" data-action="toggle-hard-word" data-id="${current.id}">${current.hardWord ? "已收藏难词" : "收藏难词"}</button>
+        <button class="small-btn ghost" data-action="toggle-watch-later" data-id="${current.id}">${current.watchLater ? "已稍后再看" : "稍后再看"}</button>
+      </div>
       ${renderExpandedArea(current)}
       <section class="grid three stats-grid top-gap">
         <article class="card compact inset"><p class="kicker">今日新词</p><h3>${stats.today.newWords}</h3></article>
@@ -349,57 +367,77 @@ function renderVocab() {
 
 function renderPractice() {
   const listAll = getListeningList(state);
-  const list = listeningType === "全部" ? listAll : listAll.filter((i) => i.type === listeningType);
+  const list = listAll.filter((i) => i.type === selectedListeningType);
   const grammar = grammarLessons.slice(0, 4);
   const mistakes = getMistakeWords(state);
+  const activeUnit = listAll.find((item) => item.id === activeListeningQuestionId) || list[0];
+  const selectedAnswer = listeningAnswers[activeUnit?.id];
+  const showResult = listeningShowResult[activeUnit?.id];
+  const reading = readingStrategies.slice(0, 4);
+
+  if (practicePanel === "hub") {
+    views.practice.innerHTML = `
+      <section class="section-intro"><h2>练习页</h2><p class="muted">先选训练入口，再进入单点练习。</p></section>
+      <section class="task-stack">
+        <article class="card entry-card"><h3>听力真题</h3><p class="muted">按四级结构做题：先听题，再提交答案，再看定位句与解析。</p><button class="primary-btn top-gap" data-action="open-practice-panel" data-panel="listening">进入听力真题</button></article>
+        <article class="card entry-card"><h3>阅读定位</h3><p class="muted">${reading.map((r) => r.title).join(" · ")}</p><button class="small-btn top-gap" data-action="quick-complete" data-key="readingGrammar">完成 1 次阅读定位训练</button></article>
+        <article class="card entry-card"><h3>语法基础</h3><p class="muted">${grammar.map((g) => g.topic).join(" · ")}</p><button class="small-btn top-gap" data-action="quick-complete" data-key="readingGrammar">完成 1 次语法训练</button></article>
+        <article class="card entry-card"><h3>错题回顾</h3><p class="muted">拼写错词 ${mistakes.length} 个，建议立即回顾。</p><button class="small-btn top-gap" data-action="go-vocab-spelling">去错题回顾</button></article>
+      </section>
+    `;
+    return;
+  }
 
   views.practice.innerHTML = `
-    <section class="section-intro"><h2>练习</h2><p class="muted">听力训练 / 语法基础 / 错题回顾</p></section>
-    <section class="grid two">
-      <article class="card">
-        <div class="section-head"><h3>听力训练</h3><span class="pill">轻听模式</span></div>
-        <div class="chips secondary">
-          ${["全部", "短篇新闻", "长对话", "听力篇章"].map((t) => `<button class="chip ${listeningType === t ? "active" : ""}" data-action="listening-type" data-type="${t}">${t}</button>`).join("")}
-        </div>
-        <div class="task-stack top-gap">
-          ${list.slice(0, 3).map((item) => `
-            <article class="card compact">
-              <div class="section-head"><h4>${escapeHtml(item.title)}</h4><span class="mini-status pending">${item.duration}</span></div>
-              <p class="muted">${item.type} · 目标：${escapeHtml(item.target)}</p>
-              <div class="action-row top-gap">
-                <button class="small-btn" data-action="listen-play" data-id="${item.id}">${activeListeningId === item.id ? "暂停" : "播放"}</button>
-                <button class="small-btn ghost" data-action="set-speed" data-speed="0.8">0.8x</button>
-                <button class="small-btn ghost" data-action="set-speed" data-speed="1.0">1.0x</button>
-                <button class="small-btn ghost" data-action="set-speed" data-speed="1.2">1.2x</button>
-                <button class="small-btn ghost" data-action="listen-repeat" data-id="${item.id}">重点句重复</button>
-                <button class="small-btn ghost" data-action="listen-transcript" data-id="${item.id}">原文</button>
-                <button class="small-btn ghost" data-action="listen-favorite" data-id="${item.id}">${item.favorite ? "取消收藏" : "收藏"}</button>
-                <button class="small-btn ghost" data-action="listen-done" data-id="${item.id}">标记已练习</button>
-              </div>
-              <div id="transcript-${item.id}" class="muted top-gap hidden">${escapeHtml(item.transcript)}</div>
-            </article>
-          `).join("")}
-        </div>
-        <p class="muted top-gap">播放状态：${activeListeningId ? `${activeListeningId} · ${fakePlayerSec}s · ${listeningSpeed}x` : "未播放"}</p>
-      </article>
-
-      <article class="card">
-        <div class="section-head"><h3>语法基础</h3><span class="pill">12个要点</span></div>
-        <ul class="bullet-list">
-          ${grammar.map((g) => `<li><strong>${escapeHtml(g.topic)}</strong>：${escapeHtml(g.drill)}</li>`).join("")}
-        </ul>
-        <button class="small-btn top-gap" data-action="quick-complete" data-key="readingGrammar">完成 1 次语法训练</button>
-      </article>
-
-      <article class="card">
-        <div class="section-head"><h3>错题回顾</h3><span class="pill">${mistakes.length} 词</span></div>
-        <p class="muted">拼写错词会自动进入回顾池，建议今天优先处理。</p>
-        <ul class="bullet-list small">
-          ${mistakes.slice(0, 6).map((w) => `<li>${escapeHtml(w.word)} · ${escapeHtml(w.meaning)}</li>`).join("") || "<li>暂无错词，继续保持。</li>"}
-        </ul>
-        <button class="small-btn top-gap" data-action="go-vocab-spelling">去拼写回顾</button>
-      </article>
+    <section class="section-intro"><h2>听力真题训练器</h2><p class="muted">做题驱动：先听题，再答题，再看解析。</p></section>
+    <section class="card">
+      <div class="section-head"><h3>题型入口</h3><button class="ghost-btn" data-action="open-practice-panel" data-panel="hub">返回练习主页</button></div>
+      <div class="chips secondary">
+        ${["短篇新闻", "长对话", "听力篇章"].map((t) => `<button class="chip ${selectedListeningType === t ? "active" : ""}" data-action="listening-type" data-type="${t}">${t}</button>`).join("")}
+      </div>
+      <div class="task-stack top-gap">
+        ${list.map((item) => `
+          <article class="card compact ${activeUnit?.id === item.id ? "active-training-card" : ""}">
+            <div class="section-head"><h4>${escapeHtml(item.title)}</h4><span class="mini-status pending">${escapeHtml(item.qno)}</span></div>
+            <p class="muted">${escapeHtml(item.year)} · 训练重点：${escapeHtml(item.target)}</p>
+            <div class="action-row top-gap">
+              <button class="small-btn ${activeUnit?.id === item.id ? "candy" : ""}" data-action="open-listening-unit" data-id="${item.id}">进入做题</button>
+              <button class="small-btn ghost" data-action="listen-favorite" data-id="${item.id}">${item.favorite ? "取消收藏" : "收藏题目"}</button>
+            </div>
+          </article>
+        `).join("")}
+      </div>
     </section>
+
+    ${activeUnit ? `<section class="card top-gap">
+      <div class="section-head"><h3>${escapeHtml(activeUnit.title)}</h3><span class="pill">${escapeHtml(activeUnit.type)}</span></div>
+      <p class="muted">训练重点：${escapeHtml(activeUnit.target)}</p>
+      <p class="muted">题目：${escapeHtml(activeUnit.question)}</p>
+      <div class="action-row top-gap">
+        <button class="small-btn" data-action="listen-play" data-id="${activeUnit.id}">${activeListeningId === activeUnit.id ? "暂停音频" : "播放音频"}</button>
+        <button class="small-btn ghost" data-action="set-speed" data-speed="0.8">慢速 0.8x</button>
+        <button class="small-btn ghost" data-action="set-speed" data-speed="1.0">标准 1.0x</button>
+      </div>
+      <div class="radio-list top-gap">
+        ${activeUnit.options.map((opt) => `<label class="option-row"><input type="radio" name="listen-option" ${selectedAnswer === opt.key ? "checked" : ""} data-action="select-listening-answer" data-id="${activeUnit.id}" data-answer="${opt.key}"/><span>${opt.key}. ${escapeHtml(opt.text)}</span></label>`).join("")}
+      </div>
+      <div class="action-row top-gap">
+        <button class="primary-btn" data-action="submit-listening-answer" data-id="${activeUnit.id}">提交答案</button>
+        <button class="small-btn ghost" data-action="listen-repeat" data-id="${activeUnit.id}">查看答案句</button>
+      </div>
+      ${showResult ? `<div class="feedback ${activeUnit.answer === selectedAnswer ? "success" : "warn"} top-gap">
+        正确答案：${activeUnit.answer} · 你的答案：${selectedAnswer || "未选择"}
+      </div>
+      <p class="muted top-gap"><strong>答案句定位：</strong>${escapeHtml(activeUnit.answerSentence)}</p>
+      <p class="muted"><strong>解析：</strong>${escapeHtml(activeUnit.analysis)}</p>
+      <p class="muted"><strong>错因提示：</strong>${escapeHtml(activeUnit.errorTip)}</p>
+      <details class="top-gap"><summary>查看原文</summary><p class="muted">${escapeHtml(activeUnit.transcript)}</p></details>
+      <div class="action-row top-gap">
+        <button class="small-btn ghost" data-action="mark-understood" data-id="${activeUnit.id}" data-understood="yes">听懂了</button>
+        <button class="small-btn ghost" data-action="mark-understood" data-id="${activeUnit.id}" data-understood="no">没听懂</button>
+      </div>` : ""}
+      <p class="muted top-gap">播放状态：${activeListeningId ? `${activeListeningId} · ${fakePlayerSec}s · ${listeningSpeed}x` : "未播放"}</p>
+    </section>` : ""}
   `;
 }
 
@@ -593,6 +631,20 @@ function handleAction(action, el) {
     playPronunciation("example", current, sentenceAccent);
     return;
   }
+  if (action === "play-phrase-audio") {
+    current.activePhrase = el.dataset.phrase || "";
+    current.activePhraseAudioUs = current.phraseAudio?.[current.activePhrase]?.us || "";
+    current.activePhraseAudioUk = current.phraseAudio?.[current.activePhrase]?.uk || "";
+    playPronunciation("phrase", current, sentenceAccent);
+    return;
+  }
+  if (action === "play-family-audio") {
+    current.activeFamilyWord = el.dataset.word || "";
+    current.activeFamilyAudioUs = current.familyAudio?.[current.activeFamilyWord]?.us || "";
+    current.activeFamilyAudioUk = current.familyAudio?.[current.activeFamilyWord]?.uk || "";
+    playPronunciation("family", current, sentenceAccent);
+    return;
+  }
   if (action === "toggle-word-more") {
     if (expandedWordIds.has(el.dataset.id)) expandedWordIds.delete(el.dataset.id); else expandedWordIds.add(el.dataset.id);
     renderVocab();
@@ -600,6 +652,20 @@ function handleAction(action, el) {
   }
   if (action === "show-phrase") {
     showToast(`${el.dataset.phrase} · ${el.dataset.zh}`);
+    return;
+  }
+  if (action === "toggle-hard-word") {
+    const row = state.vocabProgress[el.dataset.id] || {};
+    state.vocabProgress[el.dataset.id] = { ...row, hardWord: !row.hardWord };
+    saveState(state);
+    renderVocab();
+    return;
+  }
+  if (action === "toggle-watch-later") {
+    const row = state.vocabProgress[el.dataset.id] || {};
+    state.vocabProgress[el.dataset.id] = { ...row, watchLater: !row.watchLater };
+    saveState(state);
+    renderVocab();
     return;
   }
   if (action === "word-rate") {
@@ -649,7 +715,18 @@ function handleAction(action, el) {
     return;
   }
   if (action === "listening-type") {
-    listeningType = el.dataset.type;
+    selectedListeningType = el.dataset.type;
+    activeListeningQuestionId = getListeningList(state).find((i) => i.type === selectedListeningType)?.id || null;
+    renderPractice();
+    return;
+  }
+  if (action === "open-practice-panel") {
+    practicePanel = el.dataset.panel;
+    renderPractice();
+    return;
+  }
+  if (action === "open-listening-unit") {
+    activeListeningQuestionId = el.dataset.id;
     renderPractice();
     return;
   }
@@ -665,7 +742,28 @@ function handleAction(action, el) {
   }
   if (action === "listen-repeat") {
     const row = getListeningList(state).find((i) => i.id === el.dataset.id);
-    showToast(row?.keySentence || "重复重点句");
+    showToast(row?.answerSentence || row?.keySentence || "重复重点句");
+    return;
+  }
+  if (action === "select-listening-answer") {
+    listeningAnswers[el.dataset.id] = el.dataset.answer;
+    return;
+  }
+  if (action === "submit-listening-answer") {
+    const answer = listeningAnswers[el.dataset.id];
+    if (!answer) {
+      showToast("请先选择一个选项");
+      return;
+    }
+    const result = submitListeningAnswer(state, el.dataset.id, answer);
+    listeningShowResult[el.dataset.id] = true;
+    if (result.correct) {
+      showToast("回答正确，已计入今日任务");
+      completeTaskByKey("listening");
+    } else {
+      showToast(`回答错误，正确答案 ${result.answer}`);
+    }
+    renderPractice();
     return;
   }
   if (action === "listen-transcript") {
@@ -681,6 +779,12 @@ function handleAction(action, el) {
     markListeningPracticed(state, el.dataset.id);
     completeTaskByKey("listening");
     showToast("已标记听力完成");
+    renderPractice();
+    return;
+  }
+  if (action === "mark-understood") {
+    markListeningUnderstanding(state, el.dataset.id, el.dataset.understood === "yes");
+    showToast(el.dataset.understood === "yes" ? "已标记：听懂了" : "已标记：没听懂");
     renderPractice();
     return;
   }
@@ -717,6 +821,7 @@ function boot() {
   ensureDailyTasks(state);
   syncTaskCompletionFromProgress();
   refreshDeck();
+  activeListeningQuestionId = getListeningList(state).find((i) => i.type === selectedListeningType)?.id || null;
   markVocabSession(vocabDeck[vocabIndex]?.id || null);
   registerEvents();
   renderView();

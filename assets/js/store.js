@@ -104,7 +104,9 @@ function ensureWordProgress(state, wordId) {
     nextReviewAt: prev.nextReviewAt || null,
     reviewQueue: Array.isArray(prev.reviewQueue) ? prev.reviewQueue : [],
     spellingEligible: Boolean(prev.spellingEligible),
-    wrongSpellingCount: prev.wrongSpellingCount || 0
+    wrongSpellingCount: prev.wrongSpellingCount || 0,
+    hardWord: Boolean(prev.hardWord),
+    watchLater: Boolean(prev.watchLater)
   };
   return state.vocabProgress[wordId];
 }
@@ -164,6 +166,8 @@ function enrichWord(baseWord) {
   return {
     ...baseWord,
     ...detail,
+    pos: detail.pos || detail.meanings?.[0]?.enLabel || "",
+    examTags: detail.examTags || ["四级高频"],
     mainMeaning,
     meanings,
     example_en: exampleEn,
@@ -171,6 +175,10 @@ function enrichWord(baseWord) {
     roots: detail.roots || [],
     wordFamily: detail.wordFamily || [],
     phrases: detail.phrases || [],
+    secondaryMeanings: detail.secondaryMeanings || [],
+    confusable: detail.confusable || [],
+    phraseAudio: detail.phraseAudio || {},
+    familyAudio: detail.familyAudio || {},
     extraExamples: detail.extraExamples || [],
     audio_us: detail.audio_us || "",
     audio_uk: detail.audio_uk || "",
@@ -351,6 +359,10 @@ export function getListeningList(state) {
     ...item,
     practicedTimes: state.listeningProgress[item.id]?.times || 0,
     practiced: Boolean(state.listeningProgress[item.id]?.practiced),
+    attempts: state.listeningProgress[item.id]?.attempts || 0,
+    lastAnswer: state.listeningProgress[item.id]?.lastAnswer || null,
+    correctCount: state.listeningProgress[item.id]?.correctCount || 0,
+    understood: state.listeningProgress[item.id]?.understood || null,
     favorite: state.listeningFavorites.includes(item.id)
   }));
 }
@@ -369,6 +381,37 @@ export function toggleListeningFavorite(state, id) {
   const set = new Set(state.listeningFavorites || []);
   if (set.has(id)) set.delete(id); else set.add(id);
   state.listeningFavorites = [...set];
+  saveState(state);
+}
+
+export function submitListeningAnswer(state, id, answer) {
+  const target = listeningLibrary.find((item) => item.id === id);
+  if (!target) return { correct: false, answer: "", progress: null };
+  const isCorrect = target.answer === answer;
+  const prev = state.listeningProgress[id] || {};
+  state.listeningProgress[id] = {
+    ...prev,
+    practiced: true,
+    times: (prev.times || 0) + 1,
+    attempts: (prev.attempts || 0) + 1,
+    lastAnswer: answer,
+    correctCount: (prev.correctCount || 0) + (isCorrect ? 1 : 0),
+    updatedAt: Date.now()
+  };
+  if (isCorrect) state.stats.totalMinutes += 8;
+  saveState(state);
+  return { correct: isCorrect, answer: target.answer, progress: state.listeningProgress[id] };
+}
+
+export function markListeningUnderstanding(state, id, understood) {
+  const prev = state.listeningProgress[id] || {};
+  state.listeningProgress[id] = {
+    ...prev,
+    practiced: true,
+    times: Math.max(1, prev.times || 0),
+    understood,
+    updatedAt: Date.now()
+  };
   saveState(state);
 }
 
