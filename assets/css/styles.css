@@ -126,6 +126,46 @@ summary {
   display: block;
 }
 
+.entry-card h3 {
+  margin-bottom: 8px;
+}
+
+.active-training-card {
+  border: 1px solid var(--primary);
+  background: var(--primary-soft);
+}
+
+.radio-list {
+  display: grid;
+  gap: 10px;
+}
+
+.option-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.option-row input {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+}
+
+.inline-audio {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.clickable-chip {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+}
+
 .card {
   background: var(--surface);
   border-radius: 22px;
