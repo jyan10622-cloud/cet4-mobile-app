@@ -1,6 +1,5 @@
 import {
-  grammarLessons,
-  readingStrategies
+  grammarLessons
 } from "./data.js";
 import {
   loadState,
@@ -131,6 +130,7 @@ function startTask(task) {
 
 function renderHome() {
   const todayKey = getTodayKey();
+  syncTaskCompletionFromProgress(todayKey);
   const dashboard = getDashboard(state, todayKey);
   const stats = getVocabStats(state);
   const countdown = getCountdown(state.settings.examDate);
@@ -172,6 +172,7 @@ function renderHome() {
 
 function renderDaily() {
   const todayKey = getTodayKey();
+  syncTaskCompletionFromProgress(todayKey);
   const tasks = ensureDailyTasks(state, todayKey);
   const done = tasks.filter((t) => t.status === "completed").length;
   const pendingTask = tasks.find((t) => t.status !== "completed");
@@ -181,24 +182,22 @@ function renderDaily() {
     <section class="card">
       <div class="section-head"><h3>完成进度</h3><span class="pill">${done}/${tasks.length}</span></div>
       <div class="bar"><span style="width:${Math.round((done / Math.max(1, tasks.length)) * 100)}%"></span></div>
-      ${pendingTask ? `<button class="ghost-btn top-gap" data-action="start-task" data-id="${pendingTask.id}">继续：${escapeHtml(pendingTask.title)}</button>` : `<p class="feedback success top-gap">今日任务已清空，建议去词汇页做额外复习。</p>`}
+      ${pendingTask ? `<button class="ghost-btn top-gap resume-pill" data-action="start-task" data-id="${pendingTask.id}">▶ 继续未完成：${escapeHtml(pendingTask.title)}</button>` : `<p class="feedback success top-gap">今日任务已清空，建议去词汇页做额外复习。</p>`}
     </section>
     <section class="task-stack top-gap">
       ${tasks.map((t) => `
         <article class="card task-card ${t.status === "completed" ? "is-done" : ""}">
-          <label class="check-head">
-            <input type="checkbox" data-action="quick-check" data-id="${t.id}" ${t.status === "completed" ? "checked" : ""}/>
+          <div class="check-head">
+            <button class="task-check-btn ${t.status === "completed" ? "checked" : ""}" data-action="task-quick-action" data-id="${t.id}" aria-label="任务状态">${t.status === "completed" ? "✅" : "🟣"}</button>
             <div>
               <h3>${escapeHtml(t.title)}</h3>
               <p class="muted">预计 ${t.minutes} 分钟</p>
             </div>
             <span class="mini-status ${statusClass(t.status)}">${taskStatusText(t.status)}</span>
-          </label>
+          </div>
           <div class="action-row top-gap">
-            <button class="small-btn ghost" data-action="task-status" data-id="${t.id}" data-status="pending">开始</button>
-            <button class="small-btn" data-action="task-status" data-id="${t.id}" data-status="completed">完成</button>
-            <button class="small-btn ghost" data-action="task-status" data-id="${t.id}" data-status="skipped">跳过</button>
-            <button class="small-btn ghost" data-action="task-status" data-id="${t.id}" data-status="deferred">延期</button>
+            <button class="small-btn ghost" data-action="start-task" data-id="${t.id}">去完成任务</button>
+            <button class="small-btn ghost" data-action="task-status" data-id="${t.id}" data-status="deferred">稍后提醒</button>
           </div>
         </article>
       `).join("")}
@@ -241,7 +240,7 @@ function renderExampleAudioControl(card) {
   const hasAny = hasUS || hasUK;
   return `
     <div class="example-audio-row">
-      <button class="play-btn ${hasAny ? "" : "fallback"}" data-action="play-example-audio">🎬</button>
+      <button class="play-btn ${hasAny ? "" : "fallback"}" data-action="play-example-audio">🔊</button>
       <button class="accent-chip ${sentenceAccent === "us" ? "active" : ""}" data-action="set-example-accent" data-accent="us" ${hasUS ? "" : "disabled"}>美音</button>
       <button class="accent-chip ${sentenceAccent === "uk" ? "active" : ""}" data-action="set-example-accent" data-accent="uk" ${hasUK ? "" : "disabled"}>英音</button>
       <span class="mini-muted">${hasAny ? "例句播放" : "暂无真人句音频，自动切系统朗读"}</span>
@@ -261,9 +260,12 @@ function renderExpandedArea(card) {
       ${extraMeanings.length ? `<div class="detail-block"><h4>更多词义</h4><div class="mini-list">${extraMeanings.map((m) => `<span class="soft-chip">${escapeHtml(m.enLabel)} ${escapeHtml(m.zh)}</span>`).join("")}</div></div>` : ""}
       ${card.roots.length ? `<div class="detail-block"><h4>词根词缀</h4><div class="mini-list">${card.roots.map((r) => `<span class="soft-chip">${escapeHtml(r.part)}：${escapeHtml(r.meaning)}</span>`).join("")}</div></div>` : ""}
       ${card.wordFamily.length ? `<div class="detail-block"><h4>同词族</h4><ul class="bullet-list small">${card.wordFamily.slice(0, 4).map((f) => `<li>${escapeHtml(f.word)} (${escapeHtml(f.pos)}) · ${escapeHtml(f.zh)}</li>`).join("")}</ul></div>` : ""}
-      ${card.phrases?.length ? `<div class="detail-block"><h4>四级重点词组</h4><div class="mini-list">${card.phrases.map((p) => `<span class="soft-chip">${escapeHtml(p.phrase)} · ${escapeHtml(p.zh)}</span>`).join("")}</div></div>` : ""}
-      ${card.extraExamples?.length ? `<div class="detail-block"><h4>补充例句</h4>${card.extraExamples.slice(0, 1).map((item) => `<p>${highlightWordInSentence(item.en, card.word)}<br/><span class="muted">${escapeHtml(item.zh)}</span></p>`).join("")}</div>` : ""}
-      ${renderExampleAudioControl(card)}
+      ${card.phrases?.length ? `<div class="detail-block"><h4>四级重点词组</h4><div class="mini-list">${card.phrases.map((p) => `<span class="soft-chip">${highlightWordInSentence(p.phrase, card.word)} · ${escapeHtml(p.zh)}</span>`).join("")}</div></div>` : ""}
+      ${card.extraExamples?.length ? `<div class="detail-block"><h4>补充例句</h4>${card.extraExamples.slice(0, 2).map((item) => `<p>${highlightWordInSentence(item.en, card.word)}<br/><span class="muted">${escapeHtml(item.zh)}</span></p>`).join("")}<p class="muted">补充例句无真人音频时，将自动使用系统朗读。</p></div>` : ""}
+      <div class="detail-block">
+        <h4>额外例句发音</h4>
+        ${renderExampleAudioControl(card)}
+      </div>
     </section>
   `;
 }
@@ -295,13 +297,8 @@ function renderVocab() {
   const current = vocabDeck[vocabIndex];
   const stats = getVocabStats(state);
   const top = `
-    <section class="section-intro"><h2>词汇核心学习</h2><p class="muted">看词 → 听音 → 例句 → 标熟悉度 → 复习 → 拼写</p></section>
-    <section class="grid three stats-grid">
-      <article class="card compact"><p class="kicker">今日新词</p><h3>${stats.today.newWords}</h3></article>
-      <article class="card compact"><p class="kicker">今日复习</p><h3>${stats.today.reviewWords}</h3></article>
-      <article class="card compact"><p class="kicker">今日拼写</p><h3>${stats.today.spelling}</h3></article>
-    </section>
-    <section class="card top-gap">
+    <section class="section-intro"><h2>词汇核心学习</h2><p class="muted">看词 → 听发音 → 看例句 → 判断熟悉度 → 复习 → 拼写</p></section>
+    <section class="card compact">
       <div class="chips">
         <button class="chip ${vocabMode === "learn" ? "active" : ""}" data-action="set-vocab-mode" data-mode="learn">学习新词</button>
         <button class="chip ${vocabMode === "review" ? "active" : ""}" data-action="set-vocab-mode" data-mode="review">复习旧词</button>
@@ -320,7 +317,7 @@ function renderVocab() {
     <section class="card word-card top-gap slide-in ${vocabMode === "review" ? "review-tone" : "new-tone"}">
       <div class="word-head-row">
         <p class="task-tag">${escapeHtml(current.group)} · ${vocabIndex + 1}/${vocabDeck.length}</p>
-        <span class="word-state-badge ${getWordStageTag(current)}">${getWordStageTag(current)}</span>
+        <span class="word-state-badge ${getWordStageTag(current)}">📍 当前学习词 · ${getWordStageTag(current)}</span>
       </div>
       <div class="word-main-row">
         <h2 class="word-title">${escapeHtml(current.word)}</h2>
@@ -331,11 +328,14 @@ function renderVocab() {
       <article class="example-card">
         <p class="example-en">${highlightWordInSentence(current.example_en, current.word)}</p>
         <p class="example-zh">${escapeHtml(current.example_zh)}</p>
+        ${renderExampleAudioControl(current)}
       </article>
-      <div class="phrase-row top-gap">
-        ${(current.phrases || []).slice(0, 3).map((p) => `<button class="phrase-chip" data-action="show-phrase" data-phrase="${escapeHtml(p.phrase)}" data-zh="${escapeHtml(p.zh)}">${escapeHtml(p.phrase)}<span>${escapeHtml(p.zh)}</span></button>`).join("")}
-      </div>
       ${renderExpandedArea(current)}
+      <section class="grid three stats-grid top-gap">
+        <article class="card compact inset"><p class="kicker">今日新词</p><h3>${stats.today.newWords}</h3></article>
+        <article class="card compact inset"><p class="kicker">今日复习</p><h3>${stats.today.reviewWords}</h3></article>
+        <article class="card compact inset"><p class="kicker">今日拼写</p><h3>${stats.today.spelling}</h3></article>
+      </section>
       <div class="deck-dots top-gap">${vocabDeck.map((item, idx) => `<span class="dot ${idx === vocabIndex ? "active" : ""} ${item.id === current.id ? "current" : ""}" title="${escapeHtml(item.word)}"></span>`).join("")}</div>
       <div class="progress-line top-gap">学习进度：${vocabIndex + 1}/${vocabDeck.length}</div>
       <div class="action-row top-gap rate-row">
@@ -351,11 +351,10 @@ function renderPractice() {
   const listAll = getListeningList(state);
   const list = listeningType === "全部" ? listAll : listAll.filter((i) => i.type === listeningType);
   const grammar = grammarLessons.slice(0, 4);
-  const reading = readingStrategies.slice(0, 3);
   const mistakes = getMistakeWords(state);
 
   views.practice.innerHTML = `
-    <section class="section-intro"><h2>练习</h2><p class="muted">听力训练 / 阅读定位 / 语法基础 / 错题回顾</p></section>
+    <section class="section-intro"><h2>练习</h2><p class="muted">听力训练 / 语法基础 / 错题回顾</p></section>
     <section class="grid two">
       <article class="card">
         <div class="section-head"><h3>听力训练</h3><span class="pill">轻听模式</span></div>
@@ -385,14 +384,6 @@ function renderPractice() {
       </article>
 
       <article class="card">
-        <div class="section-head"><h3>阅读定位</h3><span class="pill">轻任务</span></div>
-        <ul class="bullet-list">
-          ${reading.map((r) => `<li><strong>${escapeHtml(r.title)}</strong>：${escapeHtml(r.method)}</li>`).join("")}
-        </ul>
-        <button class="small-btn top-gap" data-action="quick-complete" data-key="readingGrammar">完成 1 次阅读定位</button>
-      </article>
-
-      <article class="card">
         <div class="section-head"><h3>语法基础</h3><span class="pill">12个要点</span></div>
         <ul class="bullet-list">
           ${grammar.map((g) => `<li><strong>${escapeHtml(g.topic)}</strong>：${escapeHtml(g.drill)}</li>`).join("")}
@@ -410,6 +401,21 @@ function renderPractice() {
       </article>
     </section>
   `;
+}
+
+function syncTaskCompletionFromProgress(dateKey = getTodayKey()) {
+  const tasks = ensureDailyTasks(state, dateKey);
+  const todayLog = state.studyLog[dateKey] || {};
+  const completedByProgress = new Set();
+  if ((todayLog.newWords || 0) > 0) completedByProgress.add("newWords");
+  if ((todayLog.reviewWords || 0) > 0) completedByProgress.add("reviewWords");
+  if ((todayLog.spelling || 0) > 0) completedByProgress.add("spelling");
+  if ((todayLog.audioWords || 0) > 0) completedByProgress.add("audioWords");
+  tasks.forEach((task) => {
+    if (completedByProgress.has(task.key) && task.status !== "completed") {
+      setTaskStatus(state, dateKey, task.id, "completed");
+    }
+  });
 }
 
 function renderPlan() {
@@ -553,12 +559,7 @@ function handleAction(action, el) {
     startTask(task);
     return;
   }
-  if (action === "quick-check") {
-    setTaskStatus(state, today, el.dataset.id, el.checked ? "completed" : "pending");
-    renderHome();
-    renderDaily();
-    return;
-  }
+  if (action === "task-quick-action") return;
   if (action === "task-status") {
     setTaskStatus(state, today, el.dataset.id, el.dataset.status);
     renderHome();
@@ -602,6 +603,7 @@ function handleAction(action, el) {
     return;
   }
   if (action === "word-rate") {
+    el.classList.add("tap-pop");
     const row = rateVocabWord(state, el.dataset.id, el.dataset.rate);
     if (el.dataset.rate === "不认识") playPronunciation("word", current, vocabAccent);
     if (row.familiarityStatus === "已掌握") showToast("太棒了，已进入「已掌握」✨");
@@ -713,6 +715,7 @@ function registerEvents() {
 
 function boot() {
   ensureDailyTasks(state);
+  syncTaskCompletionFromProgress();
   refreshDeck();
   markVocabSession(vocabDeck[vocabIndex]?.id || null);
   registerEvents();

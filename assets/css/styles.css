@@ -639,11 +639,24 @@ summary {
   align-items: start;
 }
 
-.check-head input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
+.task-check-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  padding: 0;
   margin-top: 2px;
-  accent-color: var(--success);
+  background: #f1ebff;
+  border: 1px solid #e3d8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.task-check-btn.checked {
+  animation: cuteCheck 0.3s ease;
+  background: #e7fff2;
+  border-color: #bcefd5;
 }
 
 .check-head h3 {
@@ -825,6 +838,10 @@ summary {
   font-weight: 700;
 }
 
+.resume-pill {
+  border-style: dashed;
+}
+
 .phrase-row {
   display: flex;
   flex-wrap: wrap;
@@ -901,6 +918,11 @@ summary {
   color: #6d738f;
 }
 
+.play-btn:active,
+.tiny-audio:active {
+  transform: scale(0.94);
+}
+
 .progress-line {
   color: #6a6f8a;
   font-weight: 600;
@@ -946,7 +968,7 @@ summary {
   box-shadow: 0 8px 18px rgba(198, 153, 238, 0.28);
 }
 
-.check-head input[type="checkbox"]:checked {
+.tap-pop {
   animation: cuteCheck 0.24s ease;
 }
 
@@ -972,5 +994,9 @@ summary {
     background: linear-gradient(to top, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.66));
     padding: 8px 4px;
     z-index: 4;
+  }
+
+  .word-card .example-card {
+    margin-bottom: 2px;
   }
 }
